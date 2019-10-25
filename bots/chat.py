@@ -22,3 +22,7 @@ def help(message):
 
     # Start a thread on the original message
     message.reply("Here's a threaded reply", in_thread=True)
+
+@listen_to('test')
+def test(message):
+    message._client.rtm_send_message(message._client.find_channel_by_name("username"), 'reply test')
