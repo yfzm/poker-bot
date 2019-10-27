@@ -1,4 +1,7 @@
 from enum import Enum
+from libs.game import Game
+import threading as thread
+from typing import Callable
 
 class Status(Enum):
     IDLE = 1
@@ -7,18 +10,27 @@ class Status(Enum):
     END_HAND = 4
 
 
+MAX_PLAYER = 6
+MAX_AWAIT = 30
+
 class GameManager:
     def __init__(self):
         self.status = Status.IDLE
         self.players = []
+        self.game = None
+        self.timer = None
 
-    def init_status(self):
+    def init_status(self,func: Callable[[str], None]):
         self.players = []
+        self.game = Game(MAX_PLAYER)
+        self.timer = thread.Timer(MAX_AWAIT,function= self.begin, args=[func])
 
-    def prepare(self):
+    # TODO: need to protect through lock
+    def prepare(self, func: Callable[[str], None]):
         if self.status == Status.IDLE:
-            self.init_status()
+            self.init_status(func)
             self.status = Status.PREPARE
+            self.timer.start()
             return True
         return False
 
@@ -27,8 +39,17 @@ class GameManager:
             return False, None
         if user["name"] in self.players:
             return False, None
+        self.game.setPlayer(len(self.players), 500)
         self.players.append(user["name"])
         return True, len(self.players)
+    
+    def set_ob(self, func) -> None:
+        self.game.setOb(func)
+
+    # TODO: need to protect through lock
+    def begin(self, func: Callable[[str], None]):
+        self.game.start()
+        func()
 
     # interface: maybe in the future self.players contains more fields
     def get_all_players(self):

@@ -9,14 +9,20 @@ CHANNEL_ID = 'CP3P9CS2W'
 @listen_to('open')
 def open(message):
     # TODO: 教slackbot说中文
-    suc = gameManager.prepare()
+    def reply_start(s: str):
+        message.send(s)
+    def reply_status(game, action, playerPos, body):
+        message.send(f"action: {action}, player: {playerPos}, body: {body} \n")
 
+    suc = gameManager.prepare(reply_start)
+    gameManager.set_ob(reply_status)
     if suc:
         message.send('Wait for people to join. Reply "join" and mention me to join the game')
     else:
         message.reply("There is already a unfinished game!")
 
 
+# TODO: replace with more interactive api
 @respond_to('join', re.IGNORECASE)
 def join(message):
     suc, nplayer = gameManager.join(message.user)
