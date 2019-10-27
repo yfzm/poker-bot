@@ -1,6 +1,6 @@
 from enum import Enum
 from functools import wraps
-from card import *
+from .card import Card
 from pokerCmp import poker7
 import threading
 import random
