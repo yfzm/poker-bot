@@ -31,17 +31,19 @@ class GameManager:
         return True, len(self.players)
 
     # interface: maybe in the future self.players contains more fields
-    def get_all_players():
+    def get_all_players(self):
         return self.players
 
 
 gameManager = GameManager()
 
-# some fields of `user`
-# 'color'
-# 'deleted'
-# 'id'
-# 'is_admin'
-# 'is_app_user'
-# 'is_bot'
-# 'name'
+if __name__ == "__main__":
+    pass
+    # some fields of `user`
+    # 'color'
+    # 'deleted'
+    # 'id'
+    # 'is_admin'
+    # 'is_app_user'
+    # 'is_bot'
+    # 'name'

@@ -8,6 +8,7 @@ CHANNEL_ID = 'CP3P9CS2W'
 
 @listen_to('open')
 def open(message):
+    # TODO: 教slackbot说中文
     suc = gameManager.prepare()
 
     if suc:
