@@ -46,10 +46,14 @@ class GameManager:
     def set_ob(self, func) -> None:
         self.game.setOb(func)
 
+    def start(self) -> bool:
+        self.timer.cancel()
+        self.game.start()
+
     # TODO: need to protect through lock
     def begin(self, func: Callable[[str], None]):
         self.game.start()
-        func()
+        func("now start")
 
     def get_pos(self, user: str) -> int:
         return self.players.index(user)

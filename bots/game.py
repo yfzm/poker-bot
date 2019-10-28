@@ -45,8 +45,12 @@ def join(message):
         # TODO: give explicit reason
         message.reply("Failed to join game or already in the game.")
 
+@respond_to("^start")
+def start(message):
+    gameManager.start()
 
-@listen_to(r'r(\d+)')
+
+@listen_to(r'^r(\d+)')
 def raise_(message, chip):
     user = message.user["name"]
     if gameManager.raise_(user, int(chip)):
@@ -54,7 +58,7 @@ def raise_(message, chip):
     else:
         message.reply("raise wrong!")
 
-@listen_to(r'b(\d+)')
+@listen_to(r'^b(\d+)')
 def bet(message, chip):
     user = message.user["name"]
     if gameManager.bet(user, int(chip)):
@@ -62,7 +66,7 @@ def bet(message, chip):
     else:
         message.reply("bet wrong!")
 
-@listen_to('ca')
+@listen_to('^ca')
 def call(message):
     user = message.user["name"]
     if gameManager.check(user):
@@ -70,7 +74,7 @@ def call(message):
     else:
         message.reply("call wrong!")
 
-@listen_to('a')
+@listen_to('^a')
 def all_in(message):
     user = message.user["name"]
     if gameManager.check(user):
@@ -78,7 +82,7 @@ def all_in(message):
     else:
         message.reply("all in wrong!")
 
-@listen_to('c')
+@listen_to('^c')
 def check(message):
     user = message.user["name"]
     if gameManager.check(user):
@@ -87,7 +91,7 @@ def check(message):
         message.reply("check wrong!")
 
 
-@listen_to('f')
+@listen_to('^f')
 def fold(message):
     user = message.user["name"]
     if gameManager.fold(user):
