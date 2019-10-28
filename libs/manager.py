@@ -40,6 +40,7 @@ class GameManager:
         if user["name"] in self.players:
             return False, None
         self.game.setPlayer(len(self.players), 500)
+        self.game.setReady(len(self.players))
         self.players.append(user["name"])
         return True, len(self.players)
     
