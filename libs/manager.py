@@ -51,6 +51,28 @@ class GameManager:
         self.game.start()
         func()
 
+    def get_pos(self, user: str) -> int:
+        return self.players.index(user)
+
+    def raise_(self, user:str, chip: int) -> bool:
+        return self.game.praise(self.get_pos(user), chip) == 0
+
+    def check(self, user: str) -> bool:
+        return self.game.pcheck(self.get_pos(user)) == 0
+
+    def fold(self, user: str) -> bool:
+        return self.game.pfold(self.get_pos(user)) == 0
+
+    def bet(self, user: str, chip: int) -> bool:
+        return self.game.pbet(self.get_pos(user), chip)
+
+    def call(self, user: str) -> bool:
+        return self.game.pcall(self.get_pos(user))
+
+    def all_in(self, user: str) -> bool:
+        return self.game.pallin(self.get_pos(user))
+
+
     # interface: maybe in the future self.players contains more fields
     def get_all_players(self):
         return self.players

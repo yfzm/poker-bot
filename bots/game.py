@@ -11,13 +11,21 @@ def open(message):
     # TODO: 教slackbot说中文
     def reply_start(s: str):
         message.send(s)
+
     def reply_status(game, action, playerPos, body):
         message.send(f"action: {action}, player: {playerPos}, body: {body} \n")
 
     suc = gameManager.prepare(reply_start)
     gameManager.set_ob(reply_status)
     if suc:
-        message.send('Wait for people to join. Reply "join" and mention me to join the game')
+        message.send(
+"""Wait for people to join. Reply "join" and mention me to join the game:
+r  for raise,
+c  for check,
+f  for fold.
+a  for all in
+ca for call
+b  for bet""")
     else:
         message.reply("There is already a unfinished game!")
 
@@ -28,13 +36,66 @@ def join(message):
     suc, nplayer = gameManager.join(message.user)
 
     if suc:
-        message._client.rtm_send_message(CHANNEL_ID, '{} just joined, total player: {}'.format(message.user["name"], nplayer))
+        message._client.rtm_send_message(
+            CHANNEL_ID, '{} just joined, total player: {}'.format(message.user["name"], nplayer))
         if nplayer == 2:
-            message._client.rtm_send_message(CHANNEL_ID, 'Now you can start a game by replying "start" or wait for more player to join in.')
+            message._client.rtm_send_message(
+                CHANNEL_ID, 'Now you can start a game by replying "start" or wait for more player to join in.')
     else:
         # TODO: give explicit reason
         message.reply("Failed to join game or already in the game.")
 
 
+@listen_to(r'r(\d+)')
+def raise_(message, chip):
+    user = message.user["name"]
+    if gameManager.raise_(user, int(chip)):
+        message.reply(f"{user} has raised {chip}")
+    else:
+        message.reply("raise wrong!")
+
+@listen_to(r'b(\d+)')
+def bet(message, chip):
+    user = message.user["name"]
+    if gameManager.bet(user, int(chip)):
+        message.reply(f"{user} has raised {chip}")
+    else:
+        message.reply("bet wrong!")
+
+@listen_to('ca')
+def call(message):
+    user = message.user["name"]
+    if gameManager.check(user):
+        message.reply(f"{user} has checked")
+    else:
+        message.reply("call wrong!")
+
+@listen_to('a')
+def all_in(message):
+    user = message.user["name"]
+    if gameManager.check(user):
+        message.reply(f"{user} has checked")
+    else:
+        message.reply("all in wrong!")
+
+@listen_to('c')
+def check(message):
+    user = message.user["name"]
+    if gameManager.check(user):
+        message.reply(f"{user} has checked")
+    else:
+        message.reply("check wrong!")
+
+
+@listen_to('f')
+def fold(message):
+    user = message.user["name"]
+    if gameManager.fold(user):
+        message.reply(f"{user} has folded")
+    else:
+        message.reply("fold wrong!")
+
+
 def send_to_user_by_name(message, username):
-    message._client.rtm_send_message(message._client.find_channel_by_name(username), 'reply test')
+    message._client.rtm_send_message(
+        message._client.find_channel_by_name(username), 'reply test')

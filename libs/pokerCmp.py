@@ -60,4 +60,4 @@ if __name__ == '__main__':
     sf = "6c 7c 8c 9c Tc".split()
     temp = hand_rank(sf)
     hands = [sf]
-    res = poker(hands)
+    res = poker7(hands)
