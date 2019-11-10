@@ -86,7 +86,6 @@ class GameManager:
             if should_stop:
                 break
             eclipse_time = time.time() - starttime
-            print(eclipse_time)
             if eclipse_time < 1.0:
                 time.sleep(1.0 - eclipse_time)
 

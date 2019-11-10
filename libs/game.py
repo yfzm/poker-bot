@@ -2,9 +2,7 @@ from enum import IntEnum
 from functools import wraps
 from .card import Card
 from .pokerCmp import poker7
-import threading
 import random
-# import queue
 
 status_names = ["PREFLOP", "FLOP", "TURN", "RIVER", "END"]
 
@@ -20,16 +18,6 @@ class RoundStatus(IntEnum):
     RIVER = 3
     END = 4
 
-# def emptyHook(*args, **kwargs):
-#     return 0
-
-# def critical(func):
-#     def wrapper(self, *args, **kwargs):
-#         self.lock.acquire()
-#         ret = func(self, *args, **kwargs)
-#         self.lock.release()
-#         return ret
-#     return wrapper
 
 def status(ss):
     def dec(func):
@@ -47,16 +35,12 @@ class Game(object):
         self.maxPlayer = maxPlayer
         self.players = [Player(i) for i in range(maxPlayer)]
         self.gameStatus = GameStatus.WAITFORPLAYERREADY
-        self.lock = threading.RLock()
         self.numOfPlayer = 0
         self.deck = Deck()
         self.btn = -1
         self.ante = 20
         self.exePos = -1
         self.pubCards = []
-        # An independent thread consumes the msg and call the related hook
-        # self.queue = queue.Queue()
-        # self.ob = emptyHook
 
     def getCardsByPos(self, pos):
         player = self.players[pos]
@@ -68,15 +52,6 @@ class Game(object):
     def get_exe_pos(self):
         return self.exePos
 
-    # def hook_thread(self):
-    #     while(True):
-    #         (p, action, player, rbody) = self.queue.get(block=True)
-    #         self.players[p].hook(self, action, player, rbody)
-
-    # def setOb(self, ob):
-    #     self.ob = ob
-
-    # @critical
     @status([GameStatus.WAITFORPLAYERREADY])
     def setPlayer(self, pos, chip):
         player = self.players[pos]
@@ -87,21 +62,17 @@ class Game(object):
         player.active = True
         player.chip = chip
         self.numOfPlayer = self.numOfPlayer + 1
-        # self.notifyAll('JOIN', pos, {chip: player.chip})
         return 0
 
-    # @critical
     @status([GameStatus.WAITFORPLAYERREADY])
     def setReady(self, pos):
         player = self.players[pos]
         
         if player.active:
             player.ready = True
-            # self.notifyAll('READY', pos, {})
             return 0
         return -1
 
-    # @critical
     @status([GameStatus.WAITFORPLAYERREADY, GameStatus.CONTINUING])
     def start(self):
         for i in range(0, self.maxPlayer):
@@ -146,8 +117,6 @@ class Game(object):
         return pos
 
     def invokeNextPlayer(self):
-        # self.timer.cancel()
-        
         r = self.findNextActivePlayer(self.exePos)
         if r == -1:
             self.gend()
@@ -155,7 +124,7 @@ class Game(object):
             self.exePos = r
 
         # touch the bound
-        if (self.exePos == self.nextRound):
+        if self.roundStatus != RoundStatus.END and self.exePos == self.nextRound:
             if self.roundStatus == RoundStatus.PREFLOP:
                 self.flop()
             elif self.roundStatus == RoundStatus.FLOP:
@@ -168,9 +137,6 @@ class Game(object):
             self.lastBet = 0
             # sb first
             self.exePos = self.sb
-
-        # self.timer = threading.Timer(self.maxAwait, self.timeFunc)
-        # self.timer.start()
 
     def gend(self):
         # continue round until end
@@ -186,15 +152,12 @@ class Game(object):
 
     def flop(self):
         self.pubCards = [self.deck.getCard() for i in range(3)]
-        # self.notifyAll('FLOP', -1, {'pubCards': self.pubCards.copy()})
 
     def turn(self):
         self.pubCards.append(self.deck.getCard())
-        # self.notifyAll('TURN', -1, {'pubCards': self.pubCards.copy()})
 
     def river(self):
         self.pubCards.append(self.deck.getCard())
-        # self.notifyAll('RIVER', -1, {'pubCards': self.pubCards.copy()})
 
     def end(self):
         players = []
@@ -207,10 +170,8 @@ class Game(object):
         def take_rank(p):
             return p.rank
         players.sort(key=take_rank, reverse=True)
-        def take_res(p):
-            return {'id': p.pos, 'hand': p.hand, 'rank': p.rank}
-        # self.notifyAll('END', -1, {'res': list(map(take_res, players))})
-        # self.notifyAll('END', -1, {'res': res})
+        self.roundStatus = RoundStatus.END
+        self.gameStatus = GameStatus.CONTINUING
 
     def get_active_player_num(self):
         count = 0
@@ -228,10 +189,8 @@ class Game(object):
             player.allin = True
             action = 'ALLIN'
         player.chipBet = num
-        # self.notifyAll(action, pos, {'num': int(num)})
         return 0
     
-    # @critical
     @status([GameStatus.RUNNING])
     def pbet(self, pos, num):
         if (pos != self.exePos or num < self.ante or self.lastBet != 0):
@@ -243,7 +202,6 @@ class Game(object):
         self.invokeNextPlayer()
         return 0
 
-    # @critical
     @status([GameStatus.RUNNING])
     def pcall(self, pos):
         if pos != self.exePos or self.putChip(pos, self.lastBet, 'CALL') < 0:
@@ -251,7 +209,6 @@ class Game(object):
         self.invokeNextPlayer()
         return 0
 
-    # @critical
     @status([GameStatus.RUNNING])
     def pfold(self, pos):
         if (pos != self.exePos):
@@ -265,16 +222,13 @@ class Game(object):
             self.invokeNextPlayer()
         return 0
 
-    # @critical
     @status([GameStatus.RUNNING])
     def pcheck(self, pos):
         if (pos != self.exePos or self.permitCheck == False):
             return -1
-        # self.notifyAll('CHECK', pos, {})
         self.invokeNextPlayer()
         return 0
 
-    # @critical
     @status([GameStatus.RUNNING])
     def praise(self, pos, num):
         if (pos != self.exePos or num < self.lastBet * 2):
@@ -287,7 +241,6 @@ class Game(object):
         self.invokeNextPlayer()
         return 0
 
-    # @critical
     @status([GameStatus.RUNNING])
     def pallin(self, pos):
         if (pos != self.exePos):
@@ -315,8 +268,6 @@ class Player(object):
         self.fold = False
         self.allin = False
         self.pos = pos
-        # intend to support different interaction like AI, websocket
-        # self.hook = emptyHook
 
     def setRank(self, pubCards):
         def cardToStr(card):
