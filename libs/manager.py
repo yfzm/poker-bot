@@ -10,71 +10,94 @@ class Status(Enum):
     END_HAND = 4
 
 
-MAX_PLAYER = 6
+MAX_PLAYER = 9
 MAX_AWAIT = 30
+INITIAL_CHIPS = 500
 
 class GameManager:
     def __init__(self):
-        self.status = Status.IDLE
-        self.players = []
-        self.game = None
-        self.timer = None
+        self.tables = []
+        self.player_id2pos = {}
 
-    def init_status(self,func: Callable[[str], None]):
-        self.players = []
-        self.game = Game(MAX_PLAYER)
-        self.timer = thread.Timer(MAX_AWAIT,function= self.begin, args=[func])
+    def init_status(self):
+        pass
 
     # TODO: need to protect through lock
-    def prepare(self, func: Callable[[str], None]):
-        if self.status == Status.IDLE:
-            self.init_status(func)
-            self.status = Status.PREPARE
-            self.timer.start()
-            return True
-        return False
+    def open(self, user_id):
+        self.tables.append({
+            "game": Game(MAX_PLAYER),
+            "owner": user_id,
+            "players": []
+        })
 
-    def join(self, user):
-        if self.status != Status.PREPARE:
-            return False, None
-        if user["name"] in self.players:
-            return False, None
-        self.game.setPlayer(len(self.players), 500)
-        self.players.append(user["name"])
-        return True, len(self.players)
+        return len(self.tables) - 1
+
+    """
+    Join a table, return (pos, nplayer, err)
+    """
+    def join(self, table_id, user_id):
+        assert table_id < len(self.tables)
+        table = self.tables[table_id]
+        game = table["game"]
+        players = table["players"]
+        if user_id in players:
+            return -1, -1, "already in this table"
+        pos = len(players)
+        players.append(user_id)
+        game.setPlayer(pos, INITIAL_CHIPS)
+        game.setReady(pos)
+        return pos, pos + 1, None
     
-    def set_ob(self, func) -> None:
-        self.game.setOb(func)
+    
+    # def set_ob(self, func) -> None:
+    #     self.game.setOb(func)
 
-    def start(self) -> bool:
-        self.timer.cancel()
-        self.game.start()
 
-    # TODO: need to protect through lock
-    def begin(self, func: Callable[[str], None]):
-        self.game.start()
-        func("now start")
+    """
+    Start a game, return (hands, err)
+    """
+    def start(self, table_id, user_id):
+        table = self.tables[table_id]
+        if user_id != table["owner"]:
+            return None, "Failed to start, because only the one who open the table can start the game"
+        game = table["game"]
+        players = table["players"]
+        # if len(players) < 2:
+        #     return None, "Failed to start, because this game requires at least TWO players"
+        game.start()
+        hands = []
+        for pos, player in enumerate(players):
+            hands.append({
+                "id": player,
+                "hand": game.getCardsByPos(pos)
+            })
+        return hands, None
 
-    def get_pos(self, user: str) -> int:
-        return self.players.index(user)
+    # # TODO: need to protect through lock
+    # def begin(self, func: Callable[[str], None]):
+    #     self.game.start()
+    #     func("now start")
 
-    def raise_(self, user:str, chip: int) -> bool:
-        return self.game.praise(self.get_pos(user), chip) == 0
+    # def get_pos(self, user: str) -> int:
+    #     return self.players.index(user)
 
-    def check(self, user: str) -> bool:
-        return self.game.pcheck(self.get_pos(user)) == 0
+    # def raise_(self, user:str, chip: int) -> bool:
+    #     return self.game.praise(self.get_pos(user), chip) == 0
 
-    def fold(self, user: str) -> bool:
-        return self.game.pfold(self.get_pos(user)) == 0
+    # def check(self, user: str) -> bool:
+    #     return self.game.pcheck(self.get_pos(user)) == 0
 
-    def bet(self, user: str, chip: int) -> bool:
-        return self.game.pbet(self.get_pos(user), chip)
+    # def fold(self, user: str) -> bool:
+    #     return self.game.pfold(self.get_pos(user)) == 0
 
-    def call(self, user: str) -> bool:
-        return self.game.pcall(self.get_pos(user))
+    # def bet(self, user: str, chip: int) -> bool:
+    #     return self.game.pbet(self.get_pos(user), chip)
 
-    def all_in(self, user: str) -> bool:
-        return self.game.pallin(self.get_pos(user))
+    # def call(self, user: str) -> bool:
+    #     return self.game.pcall(self.get_pos(user))
+
+    # def all_in(self, user: str) -> bool:
+    #     return self.game.pallin(self.get_pos(user))
 
 
     # interface: maybe in the future self.players contains more fields
