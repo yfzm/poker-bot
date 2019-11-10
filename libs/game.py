@@ -56,6 +56,10 @@ class Game(object):
         self.ob = emptyHook
         threading.Thread(target=self.hook_thread).start()
 
+    def getCardsByPos(self, pos):
+        player = self.players[pos]
+        return player.cards
+
     def hook_thread(self):
         while(True):
             (p, action, player, rbody) = self.queue.get(block=True)

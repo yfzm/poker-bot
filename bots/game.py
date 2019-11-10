@@ -2,52 +2,81 @@ from slackbot.bot import respond_to
 from slackbot.bot import listen_to
 import re
 from libs.manager import gameManager
+from .message_helper import *
 
-CHANNEL_ID = 'CP3P9CS2W'
-
+# TODO: 教slackbot说中文
+# CHANNEL_ID = 'CP3P9CS2W'
+g_games = {}
+g_user_id2name = {}
 
 @listen_to('open')
 def open(message):
-    # TODO: 教slackbot说中文
-    def reply_start(s: str):
-        message.send(s)
+    channel_id = get_channel(message)
+    if channel_id in g_games.keys():
+        message.reply("Failed to open a game, because there is an unfinished game in this channel!")
+        return
+    
+    user_id = get_user_id(message)
+    user_name = get_user_name(message)
 
-    def reply_status(game, action, playerPos, body):
-        message.send(f"action: {action}, player: {playerPos}, body: {body} \n")
+    table_id = gameManager.open(user_id)
 
-    suc = gameManager.prepare(reply_start)
-    gameManager.set_ob(reply_status)
-    if suc:
-        message.send(
-"""Wait for people to join. Reply "join" and mention me to join the game:
+    g_user_id2name[user_id] = user_name
+    g_games[channel_id] = {
+        "table_id": table_id,
+        "clinet": message._client
+    }
+
+    message.send(
+"""Successfully opened a game! Everyone is free to join the table.
+Reply "join" to sit at the table:
 r  for raise,
 c  for check,
 f  for fold.
 a  for all in
 ca for call
 b  for bet""")
-    else:
-        message.reply("There is already a unfinished game!")
 
 
 # TODO: replace with more interactive api
-@respond_to('join', re.IGNORECASE)
+@listen_to(r'^join')
 def join(message):
-    suc, nplayer = gameManager.join(message.user)
+    # TODO: use wrapper to check channel_id
+    channel_id = get_channel(message)
+    if channel_id not in g_games.keys():
+        message.reply("Failed to join the table, because there is no opened game in this channel.")
+        return
+    table_id = g_games[channel_id]["table_id"]
+    user_id = get_user_id(message)
 
-    if suc:
-        message._client.rtm_send_message(
-            CHANNEL_ID, '{} just joined, total player: {}'.format(message.user["name"], nplayer))
-        if nplayer == 2:
-            message._client.rtm_send_message(
-                CHANNEL_ID, 'Now you can start a game by replying "start" or wait for more player to join in.')
-    else:
-        # TODO: give explicit reason
-        message.reply("Failed to join game or already in the game.")
+    pos, nplayer, err = gameManager.join(table_id, user_id)
+    if err is not None:
+        message.reply(err)
+        return
 
-@respond_to("^start")
+    message.reply(
+        '{} just joined at position {}, total player: {}'.format(message.user["name"], pos, nplayer))
+
+    if nplayer == 2:
+        message.reply(
+            'Now you can start a game by replying "start" or wait for more player to join in.')
+
+
+@listen_to("^start")
 def start(message):
-    gameManager.start()
+    channel_id = get_channel(message)
+    if channel_id not in g_games.keys():
+        message.reply("Failed to start, because there is no opened game in this channel.")
+        return
+    table_id = g_games[channel_id]["table_id"]
+    user_id = get_user_id(message)
+    hands, err = gameManager.start(table_id, user_id)
+    if err is not None:
+        message.reply(err)
+        return
+    for hand in hands:
+        send_to_user_by_name(message, g_user_id2name[hand["id"]], "Your hand is {}".format(hand["hand"]))
+    message.send("Game started! I have send your hand to you personnaly.")
 
 
 @listen_to(r'^r(\d+)')
@@ -100,6 +129,9 @@ def fold(message):
         message.reply("fold wrong!")
 
 
-def send_to_user_by_name(message, username):
-    message._client.rtm_send_message(
-        message._client.find_channel_by_name(username), 'reply test')
+def send_to_channel_by_table_id(table_id, msg):
+    for (channel_id, info) in g_games:
+        if info['table_id'] == table_id:
+            info['client'].rtm_send_message(channel_id, msg)
+            return None
+    return "table_id not found"
