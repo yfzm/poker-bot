@@ -32,10 +32,11 @@ class GameManager:
 
         return len(self.tables) - 1
 
-    """
-    Join a table, return (pos, nplayer, err)
-    """
+
     def join(self, table_id, user_id):
+        """
+        Join a table, return (pos, nplayer, err)
+        """
         assert table_id < len(self.tables)
         table = self.tables[table_id]
         game = table["game"]
@@ -53,10 +54,10 @@ class GameManager:
     #     self.game.setOb(func)
 
 
-    """
-    Start a game, return (hands, err)
-    """
     def start(self, table_id, user_id):
+        """
+        Start a game, return (hands, err)
+        """
         table = self.tables[table_id]
         if user_id != table["owner"]:
             return None, "Failed to start, because only the one who open the table can start the game"
