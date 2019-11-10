@@ -31,7 +31,8 @@ class GameManager:
             "owner": user_id,
             "players": [],
             "countdown": MAX_AWAIT,
-            "waiton": -1
+            "wait_on_pos": -1,
+            "cur_round": ""
         })
 
         return len(self.tables) - 1
@@ -107,7 +108,12 @@ class GameManager:
             table["countdown"] = MAX_AWAIT
             return False
 
-        if exe_pos == table["waiton"]:
+        if table["cur_round"] != round_status:
+            public_cards = game.pubCards
+            bgame.send_to_channel_by_table_id(table_id, "Enter {} stage: public cards is {}".format(round_status, public_cards))
+            table["cur_round"] = round_status
+
+        if exe_pos == table["wait_on_pos"]:
             # TODO: find a way to update message
             if countdown % 5 == 0:
                 bgame.send_to_channel_by_table_id(table_id, 
@@ -115,7 +121,7 @@ class GameManager:
                         bgame.get_user_name_by_id(players[exe_pos]), countdown))
             table["countdown"] = countdown - 1
         
-        table["waiton"] = exe_pos
+        table["wait_on_pos"] = exe_pos
         return False
 
 
