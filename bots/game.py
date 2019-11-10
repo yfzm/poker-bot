@@ -3,6 +3,7 @@ from slackbot.bot import listen_to
 import re
 from libs.manager import gameManager
 from .message_helper import *
+import threading
 
 # TODO: 教slackbot说中文
 # CHANNEL_ID = 'CP3P9CS2W'
@@ -24,7 +25,7 @@ def open(message):
     g_user_id2name[user_id] = user_name
     g_games[channel_id] = {
         "table_id": table_id,
-        "clinet": message._client
+        "client": message._client
     }
 
     message.send(
@@ -76,7 +77,8 @@ def start(message):
         return
     for hand in hands:
         send_to_user_by_name(message, g_user_id2name[hand["id"]], "Your hand is {}".format(hand["hand"]))
-    message.send("Game started! I have send your hand to you personnaly.")
+    message.send("Game started! I have send everyone's hand seperately.")
+    threading.Thread(target=gameManager.timer_function, args=(table_id,)).start()
 
 
 @listen_to(r'^r(\d+)')
@@ -130,8 +132,11 @@ def fold(message):
 
 
 def send_to_channel_by_table_id(table_id, msg):
-    for (channel_id, info) in g_games:
+    for (channel_id, info) in g_games.items():
         if info['table_id'] == table_id:
             info['client'].rtm_send_message(channel_id, msg)
             return None
     return "table_id not found"
+
+def get_user_name_by_id(user_id):
+    return g_user_id2name[user_id]
