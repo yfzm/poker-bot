@@ -1,3 +1,4 @@
+import slack
 from slackbot.bot import respond_to
 from slackbot.bot import listen_to
 import re
@@ -5,6 +6,8 @@ from libs.manager import gameManager
 
 CHANNEL_ID = 'CP3P9CS2W'
 
+def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str, text: str):
+    pass
 
 @listen_to('open')
 def open(message):
