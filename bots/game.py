@@ -4,12 +4,33 @@ from slackbot.bot import listen_to
 import re
 from libs.manager import gameManager
 from .message_helper import *
+from slackapi.client import *
 
+BOT_ID = 'UPJPKD5N2'
+HELP_MSG = """Try commands below:
+open to create a table,
+join to sit at a table,
+start to start a game,
+r  for raise,
+c  for check,
+f  for fold.
+a  for all in
+ca for call
+b  for bet
+"""
+# CHANNEL_ID = 'CP3P9CS2W'
 
-CHANNEL_ID = 'CP3P9CS2W'
+def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str, text: str, mentioned: bool):
+    if text == "open":
+        open(web_client, channel, user)
+    elif text == "join":
+        join(web_client, channel, user)
+    elif text == "start":
+        start(web_client, channel, user)
+    else:
+        if mentioned:
+            send_msg(web_client, channel, HELP_MSG, user)
 
-def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str, text: str):
-    pass
 
 # TODO: 教slackbot说中文
 # CHANNEL_ID = 'CP3P9CS2W'
