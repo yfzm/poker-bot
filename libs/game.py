@@ -1,7 +1,7 @@
 from enum import Enum
 from functools import wraps
-from card import *
-from pokerCmp import poker7
+from .card import Card
+from .pokerCmp import poker7
 import threading
 import random
 import queue
@@ -55,6 +55,10 @@ class Game(object):
         self.queue = queue.Queue()
         self.ob = emptyHook
         threading.Thread(target=self.hook_thread).start()
+
+    def getCardsByPos(self, pos):
+        player = self.players[pos]
+        return player.cards
 
     def hook_thread(self):
         while(True):
