@@ -1,3 +1,4 @@
+import slack
 from slackbot.bot import respond_to
 from slackbot.bot import listen_to
 import re
@@ -5,10 +6,17 @@ from libs.manager import gameManager
 from .message_helper import *
 import threading
 
+
+CHANNEL_ID = 'CP3P9CS2W'
+
+def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str, text: str):
+    pass
+
 # TODO: 教slackbot说中文
 # CHANNEL_ID = 'CP3P9CS2W'
 g_games = {}
 g_user_id2name = {}
+
 
 @listen_to('open')
 def open(message):
