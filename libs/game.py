@@ -1,33 +1,23 @@
-from enum import Enum
+from enum import IntEnum
 from functools import wraps
 from .card import Card
 from .pokerCmp import poker7
-import threading
 import random
-import queue
 
-class GameStatus(Enum):
+status_names = ["PREFLOP", "FLOP", "TURN", "RIVER", "END"]
+
+class GameStatus(IntEnum):
     WAITFORPLAYERREADY = 1
     RUNNING = 2
     CONTINUING = 3
 
-class RoundStatus(Enum):
-    PREFLOP = 1
-    FLOP = 2
-    TURN = 3
-    RIVER = 4
-    END = 5
+class RoundStatus(IntEnum):
+    PREFLOP = 0
+    FLOP = 1
+    TURN = 2
+    RIVER = 3
+    END = 4
 
-def emptyHook(*args, **kwargs):
-    return 0
-
-def critical(func):
-    def wrapper(self, *args, **kwargs):
-        self.lock.acquire()
-        ret = func(self, *args, **kwargs)
-        self.lock.release()
-        return ret
-    return wrapper
 
 def status(ss):
     def dec(func):
@@ -45,36 +35,25 @@ class Game(object):
         self.maxPlayer = maxPlayer
         self.players = [Player(i) for i in range(maxPlayer)]
         self.gameStatus = GameStatus.WAITFORPLAYERREADY
-        self.lock = threading.RLock()
         self.numOfPlayer = 0
         self.deck = Deck()
-        self.timer = threading.Timer(15, self.timeFunc)
         self.btn = -1
         self.ante = 20
-        # An independent thread consumes the msg and call the related hook
-        self.queue = queue.Queue()
-        self.ob = emptyHook
-        threading.Thread(target=self.hook_thread).start()
+        self.exePos = -1
+        self.pubCards = []
 
     def getCardsByPos(self, pos):
         player = self.players[pos]
         return player.cards
 
-    def hook_thread(self):
-        while(True):
-            (p, action, player, rbody) = self.queue.get(block=True)
-            self.players[p].hook(self, action, player, rbody)
+    def get_round_status_name(self):
+        return status_names[int(self.roundStatus)]
 
-    def timeFunc(self):
-        task = threading.Thread(target=self.pfold, args=(self.exePos))
-        task.start()
+    def get_exe_pos(self):
+        return self.exePos
 
-    def setOb(self, ob):
-        self.ob = ob
-
-    @critical
     @status([GameStatus.WAITFORPLAYERREADY])
-    def setPlayer(self, pos, chip, hook = emptyHook):
+    def setPlayer(self, pos, chip):
         player = self.players[pos]
         # is occupied ?
         if player.active:
@@ -82,23 +61,18 @@ class Game(object):
 
         player.active = True
         player.chip = chip
-        player.hook = hook
         self.numOfPlayer = self.numOfPlayer + 1
-        self.notifyAll('JOIN', pos, {chip: player.chip})
         return 0
 
-    @critical
     @status([GameStatus.WAITFORPLAYERREADY])
     def setReady(self, pos):
         player = self.players[pos]
         
         if player.active:
             player.ready = True
-            self.notifyAll('READY', pos, {})
             return 0
         return -1
 
-    @critical
     @status([GameStatus.WAITFORPLAYERREADY, GameStatus.CONTINUING])
     def start(self):
         for i in range(0, self.maxPlayer):
@@ -108,13 +82,10 @@ class Game(object):
         self.gameStatus = GameStatus.RUNNING
         self.roundStatus = RoundStatus.PREFLOP
         
-        def sendCardsToPlayer(player):
-            player.cards[0] = self.deck.getCard()
-            player.cards[1] = self.deck.getCard()
-            return {'cards': player.cards.copy()}
-        
-        # set array and send different msg to players repectively
-        self.notifyAll('PREFLOP', -1, list(map(sendCardsToPlayer, self.players)), True)
+        # deal all players
+        for player in self.players:
+            player.cards[0] = self.deck.getCard();
+            player.cards[1] = self.deck.getCard();
 
         # blind
         self.btn = self.findNextActivePlayer(self.btn)
@@ -131,15 +102,14 @@ class Game(object):
         self.lastBet = self.ante
         self.permitCheck = False
 
-        self.notifyAll('START', -1, {'btn': self.btn, 'sb': self.sb, 'bb': self.bb, 'utg': self.utg})
         return 0
 
     def findNextActivePlayer(self, pos):
-        pos = pos + 1
+        pos += 1
         count = 0
         while(self.players[pos].active == False or self.players[pos].fold or self.players[pos].allin):
             pos = (pos + 1) % self.maxPlayer
-            count = count + 1
+            count += 1
 
             # nobody can do action
             if (count > self.maxPlayer):
@@ -147,8 +117,6 @@ class Game(object):
         return pos
 
     def invokeNextPlayer(self):
-        self.timer.cancel()
-        
         r = self.findNextActivePlayer(self.exePos)
         if r == -1:
             self.gend()
@@ -156,7 +124,7 @@ class Game(object):
             self.exePos = r
 
         # touch the bound
-        if (self.exePos == self.nextRound):
+        if self.roundStatus != RoundStatus.END and self.exePos == self.nextRound:
             if self.roundStatus == RoundStatus.PREFLOP:
                 self.flop()
             elif self.roundStatus == RoundStatus.FLOP:
@@ -169,9 +137,6 @@ class Game(object):
             self.lastBet = 0
             # sb first
             self.exePos = self.sb
-
-        self.timer = threading.Timer(15, self.timeFunc)
-        self.timer.start()
 
     def gend(self):
         # continue round until end
@@ -187,15 +152,12 @@ class Game(object):
 
     def flop(self):
         self.pubCards = [self.deck.getCard() for i in range(3)]
-        self.notifyAll('FLOP', -1, {'pubCards': self.pubCards.copy()})
 
     def turn(self):
         self.pubCards.append(self.deck.getCard())
-        self.notifyAll('TURN', -1, {'pubCards': self.pubCards.copy()})
 
     def river(self):
         self.pubCards.append(self.deck.getCard())
-        self.notifyAll('RIVER', -1, {'pubCards': self.pubCards.copy()})
 
     def end(self):
         players = []
@@ -208,21 +170,15 @@ class Game(object):
         def take_rank(p):
             return p.rank
         players.sort(key=take_rank, reverse=True)
-        def take_res(p):
-            return {'id': p.pos, 'hand': p.hand, 'rank': p.rank}
-        self.notifyAll('END', -1, {'res': list(map(take_res, players))})
-        # self.notifyAll('END', -1, {'res': res})
+        self.roundStatus = RoundStatus.END
+        self.gameStatus = GameStatus.CONTINUING
 
-    def notifyAll(self, action, playerPos, body, isArray = False):
-        for p in range(0, self.maxPlayer):
-            if self.players[p].active == False:
-                continue
-            if (isArray):
-                rbody = body[p]
-            else:
-                rbody = body
-            self.queue.put((p, action, playerPos, rbody))
-        self.ob(self, action, playerPos, body)
+    def get_active_player_num(self):
+        count = 0
+        for player in self.players:
+            if player.active and player.fold == False:
+                count += 1
+        return count
 
     def putChip(self, pos, num, action):
         player = self.players[pos]
@@ -233,10 +189,8 @@ class Game(object):
             player.allin = True
             action = 'ALLIN'
         player.chipBet = num
-        self.notifyAll(action, pos, {'num': int(num)})
         return 0
     
-    @critical
     @status([GameStatus.RUNNING])
     def pbet(self, pos, num):
         if (pos != self.exePos or num < self.ante or self.lastBet != 0):
@@ -248,7 +202,6 @@ class Game(object):
         self.invokeNextPlayer()
         return 0
 
-    @critical
     @status([GameStatus.RUNNING])
     def pcall(self, pos):
         if pos != self.exePos or self.putChip(pos, self.lastBet, 'CALL') < 0:
@@ -256,26 +209,26 @@ class Game(object):
         self.invokeNextPlayer()
         return 0
 
-    @critical
     @status([GameStatus.RUNNING])
     def pfold(self, pos):
         if (pos != self.exePos):
             return -1
         self.players[pos].fold = True
-        self.notifyAll('FOLD', pos, {})
-        self.invokeNextPlayer()
+        
+        # end of a game
+        if self.get_active_player_num() == 1:
+            self.end()
+        else:
+            self.invokeNextPlayer()
         return 0
 
-    @critical
     @status([GameStatus.RUNNING])
     def pcheck(self, pos):
         if (pos != self.exePos or self.permitCheck == False):
             return -1
-        self.notifyAll('CHECK', pos, {})
         self.invokeNextPlayer()
         return 0
 
-    @critical
     @status([GameStatus.RUNNING])
     def praise(self, pos, num):
         if (pos != self.exePos or num < self.lastBet * 2):
@@ -288,7 +241,6 @@ class Game(object):
         self.invokeNextPlayer()
         return 0
 
-    @critical
     @status([GameStatus.RUNNING])
     def pallin(self, pos):
         if (pos != self.exePos):
@@ -316,8 +268,6 @@ class Player(object):
         self.fold = False
         self.allin = False
         self.pos = pos
-        # intend to support different interaction like AI, websocket
-        self.hook = emptyHook
 
     def setRank(self, pubCards):
         def cardToStr(card):
