@@ -1,4 +1,4 @@
-from game import *
+from .game import Game
 import sys
 import os
 import time
