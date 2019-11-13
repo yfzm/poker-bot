@@ -24,30 +24,39 @@ class RoundStatus(IntEnum):
 def status(ss):
     def dec(func):
         def wrapper(self, *args, **kwargs):
-            for s in ss:
-                if self.gameStatus == s:
-                    return func(self, *args, **kwargs)
+            if self.gameStatus in ss:
+                return func(self, *args, **kwargs)
+            # TODO: using exception or error to handle this
             return -1
         return wrapper
     return dec
 
 
 class Game(object):
-    def __init__(self, maxPlayer):
-        assert maxPlayer > 1
-        self.maxPlayer = maxPlayer
-        self.players = [Player(i) for i in range(maxPlayer)]
-        self.gameStatus = GameStatus.WAITFORPLAYERREADY
-        self.numOfPlayer = 0
-        self.deck = Deck()
-        self.btn = -1
-        self.ante = 20
-        self.exePos = -1
-        self.pubCards = []
+    def __init__(self):
+        self.max_player = 0
+        self.players = []
+        self.game_status: GameStatus = None
+        self.players_num = 0
+        self.deck: Deck = None
+        self.btn = 0
+        self.ante = 0
+        self.exe_pos = 0
+        self.pub_cards = []
 
     @staticmethod
-    def build(maxplayer):
-        pass
+    def build(max_player):
+        g = Game()
+        assert max_player > 1
+        g.max_player = max_player
+        g.players = [Player(i) for i in range(max_player)]
+        g.game_status = GameStatus.WAITFORPLAYERREADY
+        g.players_num = 0
+        g.deck = Deck()
+        g.btn = -1
+        g.ante = 20
+        g.exe_pos = -1
+        g.pub_cards = []
 
     def getCardsByPos(self, pos):
         player = self.players[pos]
@@ -57,7 +66,7 @@ class Game(object):
         return status_names[int(self.roundStatus)]
 
     def get_exe_pos(self):
-        return self.exePos
+        return self.exe_pos
 
     @status([GameStatus.WAITFORPLAYERREADY])
     def setPlayer(self, pos, chip):
@@ -68,7 +77,7 @@ class Game(object):
 
         player.active = True
         player.chip = chip
-        self.numOfPlayer = self.numOfPlayer + 1
+        self.players_num = self.players_num + 1
         return 0
 
     @status([GameStatus.WAITFORPLAYERREADY])
@@ -82,11 +91,11 @@ class Game(object):
 
     @status([GameStatus.WAITFORPLAYERREADY, GameStatus.CONTINUING])
     def start(self):
-        for i in range(0, self.maxPlayer):
+        for i in range(0, self.max_player):
             if (self.players[i].active != self.players[i].ready):
                 return -1
         # all the players are ready
-        self.gameStatus = GameStatus.RUNNING
+        self.game_status = GameStatus.RUNNING
         self.roundStatus = RoundStatus.PREFLOP
 
         # deal all players
@@ -101,7 +110,7 @@ class Game(object):
         self.utg = self.findNextActivePlayer(self.bb)
 
         # a flag for end of one round
-        self.exePos = self.utg
+        self.exe_pos = self.utg
         self.nextRound = self.bb
 
         self.putChip(self.sb, self.ante / 2, 'SB')
@@ -115,23 +124,23 @@ class Game(object):
         pos += 1
         count = 0
         while(self.players[pos].active == False or self.players[pos].fold or self.players[pos].allin):
-            pos = (pos + 1) % self.maxPlayer
+            pos = (pos + 1) % self.max_player
             count += 1
 
             # nobody can do action
-            if (count > self.maxPlayer):
+            if (count > self.max_player):
                 return -1
         return pos
 
     def invokeNextPlayer(self):
-        r = self.findNextActivePlayer(self.exePos)
+        r = self.findNextActivePlayer(self.exe_pos)
         if r == -1:
             self.gend()
         else:
-            self.exePos = r
+            self.exe_pos = r
 
         # touch the bound
-        if self.roundStatus != RoundStatus.END and self.exePos == self.nextRound:
+        if self.roundStatus != RoundStatus.END and self.exe_pos == self.nextRound:
             if self.roundStatus == RoundStatus.PREFLOP:
                 self.flop()
             elif self.roundStatus == RoundStatus.FLOP:
@@ -143,7 +152,7 @@ class Game(object):
             self.roundStatus = RoundStatus(self.roundStatus.value + 1)
             self.lastBet = 0
             # sb first
-            self.exePos = self.sb
+            self.exe_pos = self.sb
 
     def gend(self):
         # continue round until end
@@ -158,13 +167,13 @@ class Game(object):
             self.end()
 
     def flop(self):
-        self.pubCards = [self.deck.getCard() for i in range(3)]
+        self.pub_cards = [self.deck.getCard() for i in range(3)]
 
     def turn(self):
-        self.pubCards.append(self.deck.getCard())
+        self.pub_cards.append(self.deck.getCard())
 
     def river(self):
-        self.pubCards.append(self.deck.getCard())
+        self.pub_cards.append(self.deck.getCard())
 
     def end(self):
         players = []
@@ -172,14 +181,14 @@ class Game(object):
             if p.active:
                 p.chip = p.chip - p.chipBet
                 if p.fold == False:
-                    p.setRank(self.pubCards)
+                    p.setRank(self.pub_cards)
                     players.append(p)
 
         def take_rank(p):
             return p.rank
         players.sort(key=take_rank, reverse=True)
         self.roundStatus = RoundStatus.END
-        self.gameStatus = GameStatus.CONTINUING
+        self.game_status = GameStatus.CONTINUING
 
     def get_active_player_num(self):
         count = 0
@@ -201,7 +210,7 @@ class Game(object):
 
     @status([GameStatus.RUNNING])
     def pbet(self, pos, num):
-        if (pos != self.exePos or num < self.ante or self.lastBet != 0):
+        if (pos != self.exe_pos or num < self.ante or self.lastBet != 0):
             return -1
 
         self.putChip(pos, num, 'BET')
@@ -212,14 +221,14 @@ class Game(object):
 
     @status([GameStatus.RUNNING])
     def pcall(self, pos):
-        if pos != self.exePos or self.putChip(pos, self.lastBet, 'CALL') < 0:
+        if pos != self.exe_pos or self.putChip(pos, self.lastBet, 'CALL') < 0:
             return -1
         self.invokeNextPlayer()
         return 0
 
     @status([GameStatus.RUNNING])
     def pfold(self, pos):
-        if (pos != self.exePos):
+        if (pos != self.exe_pos):
             return -1
         self.players[pos].fold = True
 
@@ -232,17 +241,17 @@ class Game(object):
 
     @status([GameStatus.RUNNING])
     def pcheck(self, pos):
-        if (pos != self.exePos or self.permitCheck == False):
+        if (pos != self.exe_pos or self.permitCheck == False):
             return -1
         self.invokeNextPlayer()
         return 0
 
     @status([GameStatus.RUNNING])
     def praise(self, pos, num):
-        if (pos != self.exePos or num < self.lastBet * 2):
+        if (pos != self.exe_pos or num < self.lastBet * 2):
             return -1
 
-        self.nextRound = self.exePos
+        self.nextRound = self.exe_pos
         self.lastBet = num
         self.permitCheck = False
         self.putChip(pos, num, 'RAISE')
@@ -251,12 +260,12 @@ class Game(object):
 
     @status([GameStatus.RUNNING])
     def pallin(self, pos):
-        if (pos != self.exePos):
+        if (pos != self.exe_pos):
             return -1
 
         # does allin raise the chip?
         if self.lastBet < self.players[pos].chip:
-            self.nextRound = self.exePos
+            self.nextRound = self.exe_pos
             self.lastBet = self.players[pos].chip
         self.permitCheck = False
         self.putChip(pos, self.players[pos].chip, 'ALLIN')
