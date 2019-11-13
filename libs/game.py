@@ -6,10 +6,12 @@ import random
 
 status_names = ["PREFLOP", "FLOP", "TURN", "RIVER", "END"]
 
+
 class GameStatus(IntEnum):
     WAITFORPLAYERREADY = 1
     RUNNING = 2
     CONTINUING = 3
+
 
 class RoundStatus(IntEnum):
     PREFLOP = 0
@@ -29,6 +31,7 @@ def status(ss):
         return wrapper
     return dec
 
+
 class Game(object):
     def __init__(self, maxPlayer):
         assert maxPlayer > 1
@@ -41,6 +44,10 @@ class Game(object):
         self.ante = 20
         self.exePos = -1
         self.pubCards = []
+
+    @staticmethod
+    def build(maxplayer):
+        pass
 
     def getCardsByPos(self, pos):
         player = self.players[pos]
@@ -67,7 +74,7 @@ class Game(object):
     @status([GameStatus.WAITFORPLAYERREADY])
     def setReady(self, pos):
         player = self.players[pos]
-        
+
         if player.active:
             player.ready = True
             return 0
@@ -81,11 +88,11 @@ class Game(object):
         # all the players are ready
         self.gameStatus = GameStatus.RUNNING
         self.roundStatus = RoundStatus.PREFLOP
-        
+
         # deal all players
         for player in self.players:
-            player.cards[0] = self.deck.getCard();
-            player.cards[1] = self.deck.getCard();
+            player.cards[0] = self.deck.getCard()
+            player.cards[1] = self.deck.getCard()
 
         # blind
         self.btn = self.findNextActivePlayer(self.btn)
@@ -167,6 +174,7 @@ class Game(object):
                 if p.fold == False:
                     p.setRank(self.pubCards)
                     players.append(p)
+
         def take_rank(p):
             return p.rank
         players.sort(key=take_rank, reverse=True)
@@ -190,12 +198,12 @@ class Game(object):
             action = 'ALLIN'
         player.chipBet = num
         return 0
-    
+
     @status([GameStatus.RUNNING])
     def pbet(self, pos, num):
         if (pos != self.exePos or num < self.ante or self.lastBet != 0):
             return -1
-        
+
         self.putChip(pos, num, 'BET')
         self.lastBet = num
         self.permitCheck = True
@@ -214,7 +222,7 @@ class Game(object):
         if (pos != self.exePos):
             return -1
         self.players[pos].fold = True
-        
+
         # end of a game
         if self.get_active_player_num() == 1:
             self.end()
@@ -233,7 +241,7 @@ class Game(object):
     def praise(self, pos, num):
         if (pos != self.exePos or num < self.lastBet * 2):
             return -1
-        
+
         self.nextRound = self.exePos
         self.lastBet = num
         self.permitCheck = False
@@ -245,7 +253,7 @@ class Game(object):
     def pallin(self, pos):
         if (pos != self.exePos):
             return -1
-        
+
         # does allin raise the chip?
         if self.lastBet < self.players[pos].chip:
             self.nextRound = self.exePos
@@ -258,13 +266,14 @@ class Game(object):
     def getJSON(self):
         return 'temp'
 
+
 class Player(object):
     def __init__(self, pos):
         self.chip = 0
         self.chipBet = 0
         self.cards = [0] * 2
         self.active = False  # join a game
-        self.ready = False 
+        self.ready = False
         self.fold = False
         self.allin = False
         self.pos = pos
@@ -275,6 +284,7 @@ class Player(object):
         maxRank = poker7(map(cardToStr, self.cards + pubCards))
         self.rank = maxRank['rank']
         self.hand = maxRank['hand']
+
 
 class Deck(object):
     def __init__(self):
@@ -290,10 +300,3 @@ class Deck(object):
     def shuffle(self):
         random.shuffle(self.deckCards)
         self.i = 0
-
-if __name__ == '__main__':
-    p = Player(0)
-    p.cards = [Card(0, 1), Card(0, 2)]
-    pubCards = [Card(1, 1), Card(1, 2), Card(1, 3), Card(1, 4), Card(1, 5)]
-    p.setRank(pubCards)
-    print(p.rank)
