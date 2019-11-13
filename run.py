@@ -14,7 +14,8 @@ def test_rtm_client(**payload):
     data = payload["data"]
 
     # filter bot message
-    if "bot_id" in data.keys():
+    if "subtype" in data.keys():
+        print(f"emit a {data['subtype']} message")
         return
     
     web_client = payload["web_client"]
