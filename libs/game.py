@@ -4,8 +4,6 @@ from .card import Card
 from .pokerCmp import poker7
 import random
 
-status_names = ["PREFLOP", "FLOP", "TURN", "RIVER", "END"]
-
 
 class GameStatus(IntEnum):
     WAITFORPLAYERREADY = 1
@@ -64,7 +62,7 @@ class Game(object):
         return player.cards
 
     def get_round_status_name(self):
-        return status_names[int(self.roundStatus)]
+        return self.roundStatus.name
 
     def get_exe_pos(self):
         return self.exe_pos
