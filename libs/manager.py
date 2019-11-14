@@ -7,6 +7,7 @@ import bots.game as bgame
 from typing import List
 from slackapi.client import get_mentioned_string
 
+
 class Status(Enum):
     IDLE = 1
     PREPARE = 2
@@ -29,20 +30,19 @@ MAX_PLAYER = 9
 MAX_AWAIT = 15
 INITIAL_CHIPS = 500
 
+
 class GameManager:
     def __init__(self):
         self.tables: List[Table] = []
-        self.player_id2pos = {}
 
     def init_status(self):
         pass
 
     # TODO: need to protect through lock
     def open(self, user_id):
-        self.tables.append(Table(Game(MAX_PLAYER), user_id))
+        self.tables.append(Table(Game.build(MAX_PLAYER), user_id))
 
         return len(self.tables) - 1
-
 
     def join(self, table_id, user_id):
         """Join a table, return (pos, nplayer, err)"""
@@ -57,11 +57,9 @@ class GameManager:
         game.setPlayer(pos, INITIAL_CHIPS)
         game.setReady(pos)
         return pos, pos + 1, None
-    
-    
+
     # def set_ob(self, func) -> None:
     #     self.game.setOb(func)
-
 
     def start(self, table_id, user_id):
         """Start a game, return (hands, err)"""
@@ -105,25 +103,27 @@ class GameManager:
         if table.countdown == 0:
             # TODO: prefer check over flod
             game.pfold(exe_pos)
-            bgame.send_to_channel_by_table_id(table_id, f"timeout: {get_mentioned_string(players[exe_pos])} fold")
+            bgame.send_to_channel_by_table_id(
+                table_id, f"timeout: {get_mentioned_string(players[exe_pos])} fold")
             table.countdown = MAX_AWAIT
             return False
 
         if table.cur_round != round_status:
             public_cards = game.pubCards
-            bgame.send_to_channel_by_table_id(table_id, "Enter {} stage: public cards is {}".format(round_status, public_cards))
+            bgame.send_to_channel_by_table_id(
+                table_id, "Enter {} stage: public cards is {}".format(round_status, public_cards))
             table.cur_round = round_status
             table.countdown = MAX_AWAIT
             table.msg_ts, err = bgame.send_to_channel_by_table_id(
                 table_id, f"[{round_status}] wait for {get_mentioned_string(players[exe_pos])} to act (remaining {table.countdown}s)")
             if err is not None:
                 raise RuntimeError  # TODO: fix later
-  
+
         elif exe_pos == table.wait_on_pos:
             table.countdown -= 1
             err = bgame.update_msg_by_table_id(table_id, table.msg_ts,
-                f"[{round_status}] wait for {get_mentioned_string(players[exe_pos])} to act (remaining {table.countdown}s)")
-        
+                                               f"[{round_status}] wait for {get_mentioned_string(players[exe_pos])} to act (remaining {table.countdown}s)")
+
         if round_status == "END":
             bgame.send_to_channel_by_table_id(table_id, "Game Over!")
             return True
@@ -131,37 +131,32 @@ class GameManager:
         table.wait_on_pos = exe_pos
         return False
 
+    # TODO: need to protect through lock
 
-    # # TODO: need to protect through lock
-    # def begin(self, func: Callable[[str], None]):
-    #     self.game.start()
-    #     func("now start")
+    def check(self, table_id, user_id) -> bool:
+        game = self.tables[table_id].game
+        player_pos = self.tables[table_id].players.index(user_id)
+        return game.pcheck(player_pos) == 0
 
-    # def get_pos(self, user: str) -> int:
-    #     return self.players.index(user)
+    def fold(self, table_id, user_id) -> bool:
+        game = self.tables[table_id].game
+        player_pos = self.tables[table_id].players.index(user_id)
+        return game.pfold(player_pos) == 0
 
-    # def raise_(self, user:str, chip: int) -> bool:
-    #     return self.game.praise(self.get_pos(user), chip) == 0
+    def bet(self, table_id, user_id, chip: int) -> bool:
+        game = self.tables[table_id].game
+        player_pos = self.tables[table_id].players.index(user_id)
+        return game.pbet(player_pos, chip)
 
-    # def check(self, user: str) -> bool:
-    #     return self.game.pcheck(self.get_pos(user)) == 0
+    def call(self, table_id, user_id) -> bool:
+        game = self.tables[table_id].game
+        player_pos = self.tables[table_id].players.index(user_id)
+        return game.pcall(player_pos)
 
-    # def fold(self, user: str) -> bool:
-    #     return self.game.pfold(self.get_pos(user)) == 0
-
-    # def bet(self, user: str, chip: int) -> bool:
-    #     return self.game.pbet(self.get_pos(user), chip)
-
-    # def call(self, user: str) -> bool:
-    #     return self.game.pcall(self.get_pos(user))
-
-    # def all_in(self, user: str) -> bool:
-    #     return self.game.pallin(self.get_pos(user))
-
-
-    # interface: maybe in the future self.players contains more fields
-    def get_all_players(self):
-        return self.players
+    def all_in(self, table_id, user_id) -> bool:
+        game = self.tables[table_id].game
+        player_pos = self.tables[table_id].players.index(user_id)
+        return game.pallin(player_pos)
 
 
 gameManager = GameManager()
