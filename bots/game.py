@@ -20,6 +20,7 @@ b  for bet
 """
 # CHANNEL_ID = 'CP3P9CS2W'
 
+
 def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str, text: str, mentioned: bool):
     if text == "open":
         create_table(web_client, channel, user)
@@ -27,6 +28,16 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
         join_table(web_client, channel, user)
     elif text == "start":
         start_game(web_client, channel, user)
+    elif text.startswith("bet"):
+        bet(web_client, channel, user, 20)
+    elif text == "call":
+        call(web_client, channel, user)
+    elif text == "all":
+        all_in(web_client, channel, user)
+    elif text == "check":
+        check(web_client, channel, user)
+    elif text == "fold":
+        fold(web_client, channel, user)
     else:
         if mentioned:
             send_msg(web_client, channel, HELP_MSG, user)
@@ -39,21 +50,25 @@ g_games = {}
 
 def create_table(web_client: slack.WebClient, channel: str, user: str):
     if channel in g_games.keys():
-        message.reply("Failed to open a game, because there is an unfinished game in this channel!")
+
+        send_msg(web_client, channel,
+                 "Failed to open a game, because there is an unfinished game in this channel!")
         return
-    
+
     table_id = gameManager.open(user)
     g_games[channel] = {
         "table_id": table_id,
         "client": web_client
     }
-    send_msg(web_client, channel, "Successfully opened a game! Everyone is free to join the table.")
+    send_msg(web_client, channel,
+             "Successfully opened a game! Everyone is free to join the table.")
 
 
 def join_table(web_client: slack.WebClient, channel: str, user: str):
     # TODO: use wrapper to check channel
     if channel not in g_games.keys():
-        send_msg(web_client, channel, "Failed to join the table, because there is no opened game in this channel.")
+        send_msg(web_client, channel,
+                 "Failed to join the table, because there is no opened game in this channel.")
         return
     table_id = g_games[channel]["table_id"]
 
@@ -62,16 +77,18 @@ def join_table(web_client: slack.WebClient, channel: str, user: str):
         send_msg(web_client, channel, err)
         return
 
-    send_msg(web_client, channel, f"just joined at position {pos}, total player: {nplayer}", user)
+    send_msg(web_client, channel,
+             f"just joined at position {pos}, total player: {nplayer}", user)
 
     if nplayer == 2:
         send_msg(web_client, channel,
-            'Now you can start a game by replying "start" or wait for more player to join in.')
+                 'Now you can start a game by replying "start" or wait for more player to join in.')
 
 
 def start_game(web_client: slack.WebClient, channel: str, user: str):
     if channel not in g_games.keys():
-        send_msg(web_client, channel, "Failed to start, because there is no opened game in this channel.")
+        send_msg(web_client, channel,
+                 "Failed to start, because there is no opened game in this channel.")
         return
     table_id = g_games[channel]["table_id"]
     hands, err = gameManager.start(table_id, user)
@@ -79,59 +96,52 @@ def start_game(web_client: slack.WebClient, channel: str, user: str):
         send_msg(web_client, channel, err)
         return
     for hand in hands:
-        send_private_msg_in_channel(web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
-    send_msg(web_client, channel, "Game started! I have send your hand to you personnaly.")
-    threading.Thread(target=gameManager.timer_function, args=(table_id,)).start()
+        send_private_msg_in_channel(
+            web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
+    send_msg(web_client, channel,
+             "Game started! I have send your hand to you personnaly.")
+    # threading.Thread(target=gameManager.timer_function,
+    #                  args=(table_id,)).start()
 
 
-@listen_to(r'^r(\d+)')
-def raise_(message, chip):
-    user = message.user["name"]
-    if gameManager.raise_(user, int(chip)):
-        message.reply(f"{user} has raised {chip}")
+def bet(web_client: slack.WebClient, channel: str, user: str, chip):
+    table_id = g_games[channel]["table_id"]
+    if gameManager.bet(table_id, user, int(chip)):
+        send_msg(web_client, channel, f"{user} has raised {chip}")
     else:
-        message.reply("raise wrong!")
+        send_msg(web_client, channel, "bet wrong!")
 
-@listen_to(r'^b(\d+)')
-def bet(message, chip):
-    user = message.user["name"]
-    if gameManager.bet(user, int(chip)):
-        message.reply(f"{user} has raised {chip}")
+
+def call(web_client: slack.WebClient, channel: str, user: str):
+    table_id = g_games[channel]["table_id"]
+    if gameManager.call(table_id, user):
+        send_msg(web_client, channel, f"{user} has checked")
     else:
-        message.reply("bet wrong!")
+        send_msg(web_client, channel, "call wrong!")
 
-@listen_to('^ca')
-def call(message):
-    user = message.user["name"]
-    if gameManager.check(user):
-        message.reply(f"{user} has checked")
+
+def all_in(web_client: slack.WebClient, channel: str, user: str):
+    table_id = g_games[channel]["table_id"]
+    if gameManager.all_in(table_id, user):
+        send_msg(web_client, channel, f"{user} has checked")
     else:
-        message.reply("call wrong!")
+        send_msg(web_client, channel, "all in wrong!")
 
-@listen_to('^a')
-def all_in(message):
-    user = message.user["name"]
-    if gameManager.check(user):
-        message.reply(f"{user} has checked")
+
+def check(web_client: slack.WebClient, channel: str, user: str):
+    table_id = g_games[channel]["table_id"]
+    if gameManager.check(table_id, user):
+        send_msg(web_client, channel, f"{user} has checked")
     else:
-        message.reply("all in wrong!")
+        send_msg(web_client, channel, "check wrong!")
 
-@listen_to('^c')
-def check(message):
-    user = message.user["name"]
-    if gameManager.check(user):
-        message.reply(f"{user} has checked")
+
+def fold(web_client: slack.WebClient, channel: str, user: str):
+    table_id = g_games[channel]["table_id"]
+    if gameManager.fold(table_id, user):
+        send_msg(web_client, channel, f"{user} has folded")
     else:
-        message.reply("check wrong!")
-
-
-@listen_to('^f')
-def fold(message):
-    user = message.user["name"]
-    if gameManager.fold(user):
-        message.reply(f"{user} has folded")
-    else:
-        message.reply("fold wrong!")
+        send_msg(web_client, channel, "fold wrong!")
 
 
 def send_to_channel_by_table_id(table_id, msg):
@@ -141,12 +151,10 @@ def send_to_channel_by_table_id(table_id, msg):
             return ts, None
     return None, "table_id not found"
 
+
 def update_msg_by_table_id(table_id, ts, msg):
     for (channel, info) in g_games.items():
         if info['table_id'] == table_id:
             update_msg(info['client'], channel, msg, ts)
             return None
     return "table_id not found"
-
-def get_user_name_by_id(user_id):
-    return g_user_id2name[user_id]
