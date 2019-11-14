@@ -24,7 +24,7 @@ class RoundStatus(IntEnum):
 def status(ss):
     def dec(func):
         def wrapper(self, *args, **kwargs):
-            if self.gameStatus in ss:
+            if self.game_status in ss:
                 return func(self, *args, **kwargs)
             # TODO: using exception or error to handle this
             return -1
@@ -57,6 +57,7 @@ class Game(object):
         g.ante = 20
         g.exe_pos = -1
         g.pub_cards = []
+        return g
 
     def getCardsByPos(self, pos):
         player = self.players[pos]

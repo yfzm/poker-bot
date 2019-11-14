@@ -95,7 +95,7 @@ class GameManager:
         players = table.players
         # countdown = table.countdown
         round_status = game.get_round_status_name()
-        exe_pos = game.exePos
+        exe_pos = game.exe_pos
 
         # if round_status == "END":
         #     return True
@@ -109,7 +109,7 @@ class GameManager:
             return False
 
         if table.cur_round != round_status:
-            public_cards = game.pubCards
+            public_cards = game.pub_cards
             bgame.send_to_channel_by_table_id(
                 table_id, "Enter {} stage: public cards is {}".format(round_status, public_cards))
             table.cur_round = round_status
