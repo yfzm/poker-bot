@@ -115,7 +115,7 @@ def bet(web_client: slack.WebClient, channel: str, user: str, chip):
 def call(web_client: slack.WebClient, channel: str, user: str):
     table_id = g_games[channel]["table_id"]
     if gameManager.call(table_id, user):
-        send_msg(web_client, channel, f"{user} has checked")
+        send_msg(web_client, channel, f"{user} has called")
     else:
         send_msg(web_client, channel, "call wrong!")
 
@@ -123,7 +123,7 @@ def call(web_client: slack.WebClient, channel: str, user: str):
 def all_in(web_client: slack.WebClient, channel: str, user: str):
     table_id = g_games[channel]["table_id"]
     if gameManager.all_in(table_id, user):
-        send_msg(web_client, channel, f"{user} has checked")
+        send_msg(web_client, channel, f"{user} all in")
     else:
         send_msg(web_client, channel, "all in wrong!")
 
