@@ -35,7 +35,6 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
 # TODO: 教slackbot说中文
 # CHANNEL_ID = 'CP3P9CS2W'
 g_games = {}
-g_user_id2name = {}
 
 
 def create_table(web_client: slack.WebClient, channel: str, user: str):
@@ -138,7 +137,14 @@ def fold(message):
 def send_to_channel_by_table_id(table_id, msg):
     for (channel, info) in g_games.items():
         if info['table_id'] == table_id:
-            send_msg(info['client'], channel, msg)
+            ts = send_msg(info['client'], channel, msg)
+            return ts, None
+    return None, "table_id not found"
+
+def update_msg_by_table_id(table_id, ts, msg):
+    for (channel, info) in g_games.items():
+        if info['table_id'] == table_id:
+            update_msg(info['client'], channel, msg, ts)
             return None
     return "table_id not found"
 

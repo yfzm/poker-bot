@@ -46,6 +46,17 @@ def send_private_msg_in_channel(web_client: slack.WebClient, channel: str, user:
     """
     web_client.chat_postEphemeral(channel=channel, user=user, text=msg)
 
+def get_mentioned_string(user: str) -> str:
+    """Get mentioned format of a user: @username
+
+    Args:
+        user (str): user id
+    
+    Return:
+        mentioned_user_string (str): mentioned string
+    """
+    return f"<@{user}>"
+
 # slack_response data
 # {
 #     'channel': 'CP3P9CS2W', 

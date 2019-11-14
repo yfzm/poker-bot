@@ -4,6 +4,8 @@ import threading as thread
 from typing import Callable
 import time
 import bots.game as bgame
+from typing import List
+from slackapi.client import get_mentioned_string
 
 class Status(Enum):
     IDLE = 1
@@ -12,13 +14,24 @@ class Status(Enum):
     END_HAND = 4
 
 
+class Table():
+    def __init__(self, game: Game, owner: str):
+        self.game = game
+        self.owner = owner
+        self.players = []
+        self.countdown = MAX_AWAIT
+        self.wait_on_pos = -1
+        self.cur_round = ""
+        self.msg_ts = ""
+
+
 MAX_PLAYER = 9
 MAX_AWAIT = 15
 INITIAL_CHIPS = 500
 
 class GameManager:
     def __init__(self):
-        self.tables = []
+        self.tables: List[Table] = []
         self.player_id2pos = {}
 
     def init_status(self):
@@ -26,26 +39,17 @@ class GameManager:
 
     # TODO: need to protect through lock
     def open(self, user_id):
-        self.tables.append({
-            "game": Game(MAX_PLAYER),
-            "owner": user_id,
-            "players": [],
-            "countdown": MAX_AWAIT,
-            "wait_on_pos": -1,
-            "cur_round": ""
-        })
+        self.tables.append(Table(Game(MAX_PLAYER), user_id))
 
         return len(self.tables) - 1
 
 
     def join(self, table_id, user_id):
-        """
-        Join a table, return (pos, nplayer, err)
-        """
+        """Join a table, return (pos, nplayer, err)"""
         assert table_id < len(self.tables)
         table = self.tables[table_id]
-        game = table["game"]
-        players = table["players"]
+        game = table.game
+        players = table.players
         if user_id in players:
             return -1, -1, "already in this table"
         pos = len(players)
@@ -60,14 +64,12 @@ class GameManager:
 
 
     def start(self, table_id, user_id):
-        """
-        Start a game, return (hands, err)
-        """
+        """Start a game, return (hands, err)"""
         table = self.tables[table_id]
-        if user_id != table["owner"]:
+        if user_id != table.owner:
             return None, "Failed to start, because only the one who open the table can start the game"
-        game = table["game"]
-        players = table["players"]
+        game = table.game
+        players = table.players
         # if len(players) < 2:
         #     return None, "Failed to start, because this game requires at least TWO players"
         game.start()
@@ -91,36 +93,42 @@ class GameManager:
 
     def mainloop(self, table_id):
         table = self.tables[table_id]
-        game = table["game"]
-        players = table["players"]
-        countdown = table["countdown"]
+        game = table.game
+        players = table.players
+        # countdown = table.countdown
         round_status = game.get_round_status_name()
         exe_pos = game.exePos
 
         # if round_status == "END":
         #     return True
 
-        if countdown == 0:
+        if table.countdown == 0:
             # TODO: prefer check over flod
             game.pfold(exe_pos)
-            bgame.send_to_channel_by_table_id(table_id, "timeout: {} fold".format(bgame.get_user_name_by_id(players[exe_pos])))
-            table["countdown"] = MAX_AWAIT
+            bgame.send_to_channel_by_table_id(table_id, f"timeout: {get_mentioned_string(players[exe_pos])} fold")
+            table.countdown = MAX_AWAIT
             return False
 
-        if table["cur_round"] != round_status:
+        if table.cur_round != round_status:
             public_cards = game.pubCards
             bgame.send_to_channel_by_table_id(table_id, "Enter {} stage: public cards is {}".format(round_status, public_cards))
-            table["cur_round"] = round_status
-
-        if exe_pos == table["wait_on_pos"]:
-            # TODO: find a way to update message
-            if countdown % 5 == 0:
-                bgame.send_to_channel_by_table_id(table_id, 
-                    "[{}] wait for {} to act (remaining {}s)".format(round_status, 
-                        bgame.get_user_name_by_id(players[exe_pos]), countdown))
-            table["countdown"] = countdown - 1
+            table.cur_round = round_status
+            table.countdown = MAX_AWAIT
+            table.msg_ts, err = bgame.send_to_channel_by_table_id(
+                table_id, f"[{round_status}] wait for {get_mentioned_string(players[exe_pos])} to act (remaining {table.countdown}s)")
+            if err is not None:
+                raise RuntimeError  # TODO: fix later
+  
+        elif exe_pos == table.wait_on_pos:
+            table.countdown -= 1
+            err = bgame.update_msg_by_table_id(table_id, table.msg_ts,
+                f"[{round_status}] wait for {get_mentioned_string(players[exe_pos])} to act (remaining {table.countdown}s)")
         
-        table["wait_on_pos"] = exe_pos
+        if round_status == "END":
+            bgame.send_to_channel_by_table_id(table_id, "Game Over!")
+            return True
+
+        table.wait_on_pos = exe_pos
         return False
 
 
