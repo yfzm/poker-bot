@@ -146,7 +146,7 @@ class GameManager:
     def bet(self, table_id, user_id, chip: int) -> bool:
         game = self.tables[table_id].game
         player_pos = self.tables[table_id].players.index(user_id)
-        return game.pbet(player_pos, chip)
+        return game.praise(player_pos, chip)
 
     def call(self, table_id, user_id) -> bool:
         game = self.tables[table_id].game

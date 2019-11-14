@@ -208,17 +208,6 @@ class Game(object):
         return 0
 
     @status([GameStatus.RUNNING])
-    def pbet(self, pos, num):
-        if (pos != self.exe_pos or num < self.ante or self.lastBet != 0):
-            return -1
-
-        self.putChip(pos, num, 'BET')
-        self.lastBet = num
-        self.permitCheck = True
-        self.invokeNextPlayer()
-        return 0
-
-    @status([GameStatus.RUNNING])
     def pcall(self, pos):
         if pos != self.exe_pos or self.putChip(pos, self.lastBet, 'CALL') < 0:
             return -1
