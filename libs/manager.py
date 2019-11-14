@@ -65,6 +65,10 @@ class GameManager:
         table = self.tables[table_id]
         return table.all_in(user_id)
 
+    def start_timer(self, table_id) -> None:
+        table = self.tables[table_id]
+        table.timer_function()
+
 
 gameManager = GameManager()
 
