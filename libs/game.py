@@ -4,8 +4,6 @@ from .card import Card
 from .pokerCmp import poker7
 import random
 
-status_names = ["PREFLOP", "FLOP", "TURN", "RIVER", "END"]
-
 
 class GameStatus(IntEnum):
     WAITFORPLAYERREADY = 1
@@ -24,7 +22,7 @@ class RoundStatus(IntEnum):
 def status(ss):
     def dec(func):
         def wrapper(self, *args, **kwargs):
-            if self.gameStatus in ss:
+            if self.game_status in ss:
                 return func(self, *args, **kwargs)
             # TODO: using exception or error to handle this
             return -1
@@ -57,13 +55,14 @@ class Game(object):
         g.ante = 20
         g.exe_pos = -1
         g.pub_cards = []
+        return g
 
     def getCardsByPos(self, pos):
         player = self.players[pos]
         return player.cards
 
     def get_round_status_name(self):
-        return status_names[int(self.roundStatus)]
+        return self.roundStatus.name
 
     def get_exe_pos(self):
         return self.exe_pos
@@ -206,17 +205,6 @@ class Game(object):
             player.allin = True
             action = 'ALLIN'
         player.chipBet = num
-        return 0
-
-    @status([GameStatus.RUNNING])
-    def pbet(self, pos, num):
-        if (pos != self.exe_pos or num < self.ante or self.lastBet != 0):
-            return -1
-
-        self.putChip(pos, num, 'BET')
-        self.lastBet = num
-        self.permitCheck = True
-        self.invokeNextPlayer()
         return 0
 
     @status([GameStatus.RUNNING])
