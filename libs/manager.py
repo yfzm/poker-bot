@@ -27,7 +27,7 @@ class GameManager:
 
     # TODO: need to protect through lock
     def open(self, user_id):
-        table = Table(Game.build(MAX_PLAYER), user_id)
+        table = Table(user_id)
         self.tables[table.uid] = table
         return table.uid
 

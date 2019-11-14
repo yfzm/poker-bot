@@ -4,33 +4,54 @@ import threading as thread
 from typing import Callable
 import time
 import bots.game as bgame
-from typing import List
+from typing import List, Dict
 from slackapi.client import get_mentioned_string
 import uuid
 
 MAX_AWAIT = 15
 INITIAL_CHIPS = 500
 
+class PlayerStatus(Enum):
+    PLAYING = 0
+    FOLD = 1
+    ALLIN = 2
+    OFFLINE = 3
 
-class Table():
-    def __init__(self, game: Game, owner: str):
+class Player:
+    def __init__(self, user: str):
+        self.user = user
+        self.chip = INITIAL_CHIPS
+        self.chipBet = 0
+        self.cards = [0] * 2
+        self.active = True
+        self.status = PlayerStatus.PLAYING
+
+
+class Table:
+    def __init__(self, owner: str):
         self.uid = str(uuid.uuid4())
-        self.game = game
+        self.game = Game()
         self.owner = owner
-        self.players = []
+        self.players: List[Player] = []
+        self.players_user2pos: Dict[str, int] = dict()
         self.countdown = MAX_AWAIT
         self.wait_on_pos = -1
         self.cur_round = ""
         self.msg_ts = ""
+        self.btn = 0
+        self.ante = 20
+        self.counter = 0  # number of games
 
     def join(self, user_id):
         """Join a table, return (pos, nplayer, err)"""
-        if user_id in self.players:
+        if user_id in list(map(lambda player: player.user, self.players)):
             return -1, -1, "already in this table"
         pos = len(self.players)
-        self.players.append(user_id)
-        self.game.setPlayer(pos, INITIAL_CHIPS)
-        self.game.setReady(pos)
+        player = Player(user_id)
+        self.players.append(player)
+        self.players_user2pos[player.user] = pos
+        # self.game.setPlayer(pos, INITIAL_CHIPS)
+        # self.game.setReady(pos)
         return pos, pos + 1, None
 
     def start(self, user_id):
@@ -39,11 +60,11 @@ class Table():
             return None, "Failed to start, because only the one who open the table can start the game"
         # if len(players) < 2:
         #     return None, "Failed to start, because this game requires at least TWO players"
-        self.game.start()
+        self.game.start(self.players, self.ante, self.btn)
         hands = []
         for pos, player in enumerate(self.players):
             hands.append({
-                "id": player,
+                "id": player.user,
                 "hand": self.game.getCardsByPos(pos)
             })
         return hands, None
@@ -94,26 +115,26 @@ class Table():
         return False
 
     def check(self, user_id) -> str:
-        player_pos = self.players.index(user_id)
+        player_pos = self.players_user2pos[user_id]
         if self.game.pcheck(player_pos) != 0:
             return f"{get_mentioned_string(user_id)}, invalid check"
 
     def fold(self, user_id) -> str:
-        player_pos = self.players.index(user_id)
+        player_pos = self.players_user2pos[user_id]
         if self.game.pfold(player_pos) != 0:
             return f"{get_mentioned_string(user_id)}, invalid fold"
 
     def bet(self, user_id, chip: int) -> str:
-        player_pos = self.players.index(user_id)
+        player_pos = self.players_user2pos[user_id]
         if self.game.praise(player_pos, chip) != 0:
             return f"{get_mentioned_string(user_id)}, invalid bet"
 
     def call(self, user_id) -> str:
-        player_pos = self.players.index(user_id)
+        player_pos = self.players_user2pos[user_id]
         if self.game.pcall(player_pos) != 0:
             return f"{get_mentioned_string(user_id)}, invalid call"
 
     def all_in(self, user_id) -> str:
-        player_pos = self.players.index(user_id)
+        player_pos = self.players_user2pos[user_id]
         if self.game.pallin(player_pos) != 0:
             return f"{get_mentioned_string(user_id)}, invalid all in"
