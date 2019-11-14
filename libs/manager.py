@@ -42,18 +42,33 @@ class PokerBot:
 
     def react(self, game: Game):
         if game.permitCheck:
-            game.pcheck(self.pos)
-            bgame.send_to_channel_by_table_id(
-                self.table, f"bot {self.pos} check")
+            if game.pcheck(self.pos):
+                bgame.send_to_channel_by_table_id(
+                    self.table, f"bot {self.pos} check fail")
+            else:
+                bgame.send_to_channel_by_table_id(
+                    self.table, f"bot {self.pos} check")
+        elif self.chip >= game.lastBet and game.lastBet > 2:
+            if game.pcall(self.pos):
+                bgame.send_to_channel_by_table_id(
+                    self.table, f"bot {self.pos} call fail")
+            else:
+                bgame.send_to_channel_by_table_id(
+                    self.table, f"bot {self.pos} call")
         elif self.chip >= game.lastBet:
-            game.pcall(self.pos)
-            bgame.send_to_channel_by_table_id(
-                self.table, f"bot {self.pos} call")
+            if game.praise(self.pos, 2 if game.lastBet == 0 else 2 * game.lastBet):
+                bgame.send_to_channel_by_table_id(
+                    self.table, f"bot {self.pos} raise fail")
+            else:
+                bgame.send_to_channel_by_table_id(
+                    self.table, f"bot {self.pos} raise {game.lastBet}")
         else:
-            game.pfold(self.pos)
-            bgame.send_to_channel_by_table_id(
-                self.table, f"bot {self.pos} fold")
-
+            if game.pfold(self.pos):
+                bgame.send_to_channel_by_table_id(
+                    self.table, f"bot {self.pos} fold fail")
+            else:
+                bgame.send_to_channel_by_table_id(
+                    self.table, f"bot {self.pos} fold")
 
 class GameManager:
     def __init__(self):
@@ -80,6 +95,7 @@ class GameManager:
         players.append(user_id)
         game.setPlayer(pos, INITIAL_CHIPS)
         game.setReady(pos)
+        bgame.send_to_channel_by_table_id(table_id, f"{user_id} has joined game")
         return pos, pos + 1, None
 
     # def set_ob(self, func) -> None:
@@ -94,6 +110,7 @@ class GameManager:
         players = table.players
         # if len(players) < 2:
         #     return None, "Failed to start, because this game requires at least TWO players"
+        self.add_bot_player(table_id, user_id)
         game.start()
         hands = []
         for pos, player in enumerate(players):
@@ -102,7 +119,6 @@ class GameManager:
                 "hand": game.getCardsByPos(pos)
             })
         # FIXME: only for test
-        self.add_bot_player(table_id, user_id)
         thread.Thread(target=self.bot_function, args=[table_id]).start()
         return hands, None
 
@@ -120,8 +136,7 @@ class GameManager:
             pos = game.exe_pos
             if pos in poker_bots:
                 poker_bots[pos].react(game)
-            else:
-                time.sleep(1)
+            time.sleep(1)
 
     def timer_function(self, table_id):
         while True:
