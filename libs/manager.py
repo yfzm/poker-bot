@@ -5,8 +5,11 @@ import threading as thread
 from typing import Dict
 import time
 import bots.game as bgame
-from typing import List
+from typing import Dict
 from slackapi.client import get_mentioned_string
+from .table import Table
+
+MAX_PLAYER = 9
 
 
 class Status(Enum):
@@ -15,21 +18,6 @@ class Status(Enum):
     PLAYING = 3
     END_HAND = 4
 
-
-class Table():
-    def __init__(self, game: Game, owner: str):
-        self.game = game
-        self.owner = owner
-        self.players = []
-        self.countdown = MAX_AWAIT
-        self.wait_on_pos = -1
-        self.cur_round = ""
-        self.msg_ts = ""
-
-
-MAX_PLAYER = 9
-MAX_AWAIT = 15
-INITIAL_CHIPS = 500
 
 poker_bots: Dict[int, PokerBot] = {}
 
@@ -70,33 +58,24 @@ class PokerBot:
                 bgame.send_to_channel_by_table_id(
                     self.table, f"bot {self.pos} fold")
 
+
 class GameManager:
     def __init__(self):
-        self.tables: List[Table] = []
+        self.tables: Dict[str, Table] = dict()
 
     def init_status(self):
         pass
 
     # TODO: need to protect through lock
     def open(self, user_id):
-        self.tables.append(Table(Game.build(MAX_PLAYER), user_id))
-
-        return len(self.tables) - 1
+        table = Table(user_id)
+        self.tables[table.uid] = table
+        return table.uid
 
     def join(self, table_id, user_id):
         """Join a table, return (pos, nplayer, err)"""
-        assert table_id < len(self.tables)
         table = self.tables[table_id]
-        game = table.game
-        players = table.players
-        if user_id in players:
-            return -1, -1, "already in this table"
-        pos = len(players)
-        players.append(user_id)
-        game.setPlayer(pos, INITIAL_CHIPS)
-        game.setReady(pos)
-        bgame.send_to_channel_by_table_id(table_id, f"{user_id} has joined game")
-        return pos, pos + 1, None
+        return table.join(user_id)
 
     # def set_ob(self, func) -> None:
     #     self.game.setOb(func)
@@ -104,29 +83,18 @@ class GameManager:
     def start(self, table_id, user_id):
         """Start a game, return (hands, err)"""
         table = self.tables[table_id]
-        if user_id != table.owner:
-            return None, "Failed to start, because only the one who open the table can start the game"
-        game = table.game
-        players = table.players
         # if len(players) < 2:
         #     return None, "Failed to start, because this game requires at least TWO players"
         self.add_bot_player(table_id, user_id)
-        game.start()
-        hands = []
-        for pos, player in enumerate(players):
-            hands.append({
-                "id": player,
-                "hand": game.getCardsByPos(pos)
-            })
         # FIXME: only for test
         thread.Thread(target=self.bot_function, args=[table_id]).start()
-        return hands, None
+        return table.start(user_id)
 
     def add_bot_player(self, table_id, user_id):
         for i in range(len(self.tables[table_id].players), 4):
             pos, tot, err = self.join(table_id, f"bot_player_{i}")
-            assert tot > 0
-            poker_bots[i] = PokerBot(pos, INITIAL_CHIPS, table_id)
+            assert tot > 0 and err is None
+            poker_bots[i] = PokerBot(pos, 500, table_id)  # TODO: magic number
             print(f"add bot {pos}")
 
     def bot_function(self, table_id):
@@ -138,84 +106,34 @@ class GameManager:
                 poker_bots[pos].react(game)
             time.sleep(1)
 
-    def timer_function(self, table_id):
-        while True:
-            starttime = time.time()
-            should_stop = self.mainloop(table_id)
-            if should_stop:
-                break
-            eclipse_time = time.time() - starttime
-            if eclipse_time < 1.0:
-                time.sleep(1.0 - eclipse_time)
-
-    def mainloop(self, table_id):
+    def check(self, table_id, user_id) -> str:
+        """Check, return err"""
         table = self.tables[table_id]
-        game = table.game
-        players = table.players
-        # countdown = table.countdown
-        round_status = game.get_round_status_name()
-        exe_pos = game.exe_pos
+        return table.check(user_id)
 
-        # if round_status == "END":
-        #     return True
+    def fold(self, table_id, user_id) -> str:
+        table = self.tables[table_id]
+        return table.fold(user_id)
 
-        if table.countdown == 0:
-            # TODO: prefer check over flod
-            game.pfold(exe_pos)
-            bgame.send_to_channel_by_table_id(
-                table_id, f"timeout: {get_mentioned_string(players[exe_pos])} fold")
-            table.countdown = MAX_AWAIT
-            return False
+    def bet(self, table_id, user_id, chip: int) -> str:
+        table = self.tables[table_id]
+        return table.bet(user_id, chip)
 
-        if table.cur_round != round_status:
-            public_cards = game.pub_cards
-            bgame.send_to_channel_by_table_id(
-                table_id, "Enter {} stage: public cards is {}".format(round_status, public_cards))
-            table.cur_round = round_status
-            table.countdown = MAX_AWAIT
-            table.msg_ts, err = bgame.send_to_channel_by_table_id(
-                table_id, f"[{round_status}] wait for {get_mentioned_string(players[exe_pos])} to act (remaining {table.countdown}s)")
-            if err is not None:
-                raise RuntimeError  # TODO: fix later
+    def call(self, table_id, user_id) -> str:
+        table = self.tables[table_id]
+        return table.call(user_id)
 
-        elif exe_pos == table.wait_on_pos:
-            table.countdown -= 1
-            err = bgame.update_msg_by_table_id(table_id, table.msg_ts,
-                                               f"[{round_status}] wait for {get_mentioned_string(players[exe_pos])} to act (remaining {table.countdown}s)")
+    def all_in(self, table_id, user_id) -> str:
+        table = self.tables[table_id]
+        return table.all_in(user_id)
 
-        if round_status == "END":
-            bgame.send_to_channel_by_table_id(table_id, "Game Over!")
-            return True
+    def start_timer(self, table_id) -> None:
+        table = self.tables[table_id]
+        table.timer_function()
 
-        table.wait_on_pos = exe_pos
-        return False
-
-    # TODO: need to protect through lock
-
-    def check(self, table_id, user_id) -> bool:
-        game = self.tables[table_id].game
-        player_pos = self.tables[table_id].players.index(user_id)
-        return game.pcheck(player_pos) == 0
-
-    def fold(self, table_id, user_id) -> bool:
-        game = self.tables[table_id].game
-        player_pos = self.tables[table_id].players.index(user_id)
-        return game.pfold(player_pos) == 0
-
-    def bet(self, table_id, user_id, chip: int) -> bool:
-        game = self.tables[table_id].game
-        player_pos = self.tables[table_id].players.index(user_id)
-        return game.praise(player_pos, chip) == 0
-
-    def call(self, table_id, user_id) -> bool:
-        game = self.tables[table_id].game
-        player_pos = self.tables[table_id].players.index(user_id)
-        return game.pcall(player_pos) == 0
-
-    def all_in(self, table_id, user_id) -> bool:
-        game = self.tables[table_id].game
-        player_pos = self.tables[table_id].players.index(user_id)
-        return game.pallin(player_pos) == 0
+    def get_game_info(self, table_id) -> str:
+        table = self.tables[table_id]
+        return table.get_game_info()
 
 
 gameManager = GameManager()
