@@ -1,5 +1,5 @@
 from enum import Enum
-from libs.game import Game
+import libs.game as lgame
 import threading as thread
 from typing import Callable
 import time
@@ -15,7 +15,7 @@ class PlayerStatus(Enum):
     PLAYING = 0
     FOLD = 1
     ALLIN = 2
-    OFFLINE = 3
+    # OFFLINE = 3
 
 class Player:
     def __init__(self, user: str):
@@ -25,12 +25,36 @@ class Player:
         self.cards = [0] * 2
         self.active = True
         self.status = PlayerStatus.PLAYING
+        self.rank = None
+        self.hand = None
+    
+    def is_playing(self) -> bool:
+        return self.status == PlayerStatus.PLAYING
+
+    def is_fold(self) -> bool:
+        return self.status == PlayerStatus.FOLD
+
+    def is_allin(self) -> bool:
+        return self.status == PlayerStatus.ALLIN
+
+    def set_playing(self) -> None:
+        self.status = PlayerStatus.PLAYING
+
+    def set_fold(self) -> None:
+        self.status = PlayerStatus.FOLD
+
+    def set_allin(self) -> None:
+        self.status = PlayerStatus.ALLIN
+
+    def set_rank_and_hand(self, rank, hand):
+        self.rank = rank
+        self.hand = hand
 
 
 class Table:
     def __init__(self, owner: str):
         self.uid = str(uuid.uuid4())
-        self.game = Game()
+        self.game = lgame.Game()
         self.owner = owner
         self.players: List[Player] = []
         self.players_user2pos: Dict[str, int] = dict()

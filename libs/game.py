@@ -4,7 +4,7 @@ from .card import Card
 from .pokerCmp import poker7
 import random
 from typing import List, Dict
-from .table import Player
+from .table import Player, PlayerStatus
 
 
 class GameStatus(IntEnum):
@@ -36,7 +36,7 @@ class Game(object):
     def __init__(self):
         self.max_player = 0
         self.players = []
-        self.game_status: GameStatus = None
+        self.game_status: GameStatus = GameStatus.WAITFORPLAYERREADY
         self.players_num = 0
         self.deck: Deck = None
         self.btn = 0
@@ -45,7 +45,6 @@ class Game(object):
         self.pub_cards = []
 
     def init_game(self, players: List[Player], ante: int, btn: int):
-        self = Game()
         self.players = players
         # self.game_status = GameStatus.WAITFORPLAYERREADY
         self.players_num = len(self.players)
@@ -65,32 +64,33 @@ class Game(object):
     def get_exe_pos(self):
         return self.exe_pos
 
-    @status([GameStatus.WAITFORPLAYERREADY])
-    def setPlayer(self, pos, chip):
-        player = self.players[pos]
-        # is occupied ?
-        if player.active:
-            return -1
+    # @status([GameStatus.WAITFORPLAYERREADY])
+    # def setPlayer(self, pos, chip):
+    #     player = self.players[pos]
+    #     # is occupied ?
+    #     if player.active:
+    #         return -1
 
-        player.active = True
-        player.chip = chip
-        self.players_num = self.players_num + 1
-        return 0
+    #     player.active = True
+    #     player.chip = chip
+    #     self.players_num = self.players_num + 1
+    #     return 0
 
-    @status([GameStatus.WAITFORPLAYERREADY])
-    def setReady(self, pos):
-        player = self.players[pos]
+    # @status([GameStatus.WAITFORPLAYERREADY])
+    # def setReady(self, pos):
+    #     player = self.players[pos]
 
-        if player.active:
-            player.ready = True
-            return 0
-        return -1
+    #     if player.active:
+    #         player.ready = True
+    #         return 0
+    #     return -1
 
     @status([GameStatus.WAITFORPLAYERREADY, GameStatus.CONTINUING])
     def start(self, players: List[Player], ante: int, btn: int):
-        for i in range(0, self.max_player):
-            if (self.players[i].active != self.players[i].ready):
-                return -1
+        self.init_game(players, ante, btn)
+        # for i in range(0, self.max_player):
+        #     if (self.players[i].active != self.players[i].ready):
+        #         return -1
         # all the players are ready
         self.game_status = GameStatus.RUNNING
         self.roundStatus = RoundStatus.PREFLOP
@@ -118,9 +118,9 @@ class Game(object):
         return 0
 
     def findNextActivePlayer(self, pos):
-        pos += 1
+        pos = (pos + 1) % self.max_player
         count = 0
-        while(self.players[pos].active == False or self.players[pos].fold or self.players[pos].allin):
+        while(self.players[pos].active == False or not self.players[pos].is_playing()):
             pos = (pos + 1) % self.max_player
             count += 1
 
@@ -177,8 +177,9 @@ class Game(object):
         for p in self.players:
             if p.active:
                 p.chip = p.chip - p.chipBet
-                if p.fold == False:
-                    p.setRank(self.pub_cards)
+                if not p.is_fold():  # TODO: 有其他玩家时才去比大小
+                    rank, hand = poker7(map(lambda card: str(card), p.cards + self.pub_cards))
+                    p.set_rank_and_hand(self.pub_cards, rank, hand)
                     players.append(p)
 
         def take_rank(p):
@@ -190,7 +191,7 @@ class Game(object):
     def get_active_player_num(self):
         count = 0
         for player in self.players:
-            if player.active and player.fold == False:
+            if player.active and not player.is_fold():
                 count += 1
         return count
 
@@ -200,7 +201,7 @@ class Game(object):
             return -1
         # allin
         elif player.chip == num:
-            player.allin = True
+            player.set_allin()
             action = 'ALLIN'
         player.chipBet = num
         return 0
@@ -216,7 +217,7 @@ class Game(object):
     def pfold(self, pos):
         if (pos != self.exe_pos):
             return -1
-        self.players[pos].fold = True
+        self.players[pos].set_fold()
 
         # end of a game
         if self.get_active_player_num() == 1:
