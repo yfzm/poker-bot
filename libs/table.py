@@ -8,7 +8,7 @@ from typing import List, Dict
 from slackapi.client import get_mentioned_string
 import uuid
 
-MAX_AWAIT = 15
+MAX_AWAIT = 600
 INITIAL_CHIPS = 500
 
 class PlayerStatus(Enum):

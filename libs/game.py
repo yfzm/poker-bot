@@ -101,7 +101,7 @@ class Game(object):
 
         # a flag for end of one round
         self.exe_pos = self.utg
-        self.nextRound = self.bb
+        self.nextRound = self.utg
 
         self.putChip(self.sb, self.ante / 2, 'SB')
         self.putChip(self.bb, self.ante, 'BB')
