@@ -59,8 +59,8 @@ class Table:
         self.players: List[Player] = []
         self.players_user2pos: Dict[str, int] = dict()
         self.countdown = MAX_AWAIT
-        self.wait_on_pos = -1
-        self.cur_round = ""
+        self.exe_pos_local = -1
+        self.round_status_local = ""
         self.msg_ts = ""
         self.btn = 0
         self.ante = 20
@@ -115,27 +115,38 @@ class Table:
             self.countdown = MAX_AWAIT
             return False
 
-        if self.cur_round != round_status:
+        if self.round_status_local != round_status:
+            # the game has changed to the next status, while local status is behind
+            # so, we should print some message
             public_cards = self.game.pub_cards
             bgame.send_to_channel_by_table_id(
                 self.uid, "Enter {} stage: public cards is {}".format(round_status, public_cards))
-            self.cur_round = round_status
+            self.round_status_local = round_status
             self.countdown = MAX_AWAIT
             self.msg_ts, err = bgame.send_to_channel_by_table_id(
                 self.uid, f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
             if err is not None:
                 raise RuntimeError  # TODO: fix later
 
-        elif exe_pos == self.wait_on_pos:
+        elif exe_pos != self.exe_pos_local:
+            # the game stage is not changed, but the current active player is changed
+            # we also should print some message
+            self.countdown = MAX_AWAIT
+            self.msg_ts, err = bgame.send_to_channel_by_table_id(
+                self.uid, f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
+
+        else:
+            # neither the game stage nor current active player are changed
+            # so, we should update the message and decrease the countdown
             self.countdown -= 1
-            err = bgame.update_msg_by_table_id(self.uid, self.msg_ts,
-                                               f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
+            bgame.update_msg_by_table_id(self.uid, self.msg_ts,
+                f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
 
         if round_status == "END":
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
             return True
 
-        self.wait_on_pos = exe_pos
+        self.exe_pos_local = exe_pos
         return False
 
     def check(self, user_id) -> str:
@@ -166,9 +177,9 @@ class Table:
     def get_game_info(self) -> str:
         info_str = f"{self.game.game_status.name} {self.game.get_round_status_name()}\n"
         info_str += f"btn: {self.game.btn} {get_mentioned_string(self.players[self.game.btn].user)}\n"
-        info_str += f"sb: {self.game.btn} {get_mentioned_string(self.players[self.game.sb].user)}\n"
-        info_str += f"bb: {self.game.btn} {get_mentioned_string(self.players[self.game.bb].user)}\n"
-        info_str += f"utg: {self.game.btn} {get_mentioned_string(self.players[self.game.utg].user)}\n"
+        info_str += f"sb: {self.game.sb} {get_mentioned_string(self.players[self.game.sb].user)}\n"
+        info_str += f"bb: {self.game.bb} {get_mentioned_string(self.players[self.game.bb].user)}\n"
+        info_str += f"utg: {self.game.utg} {get_mentioned_string(self.players[self.game.utg].user)}\n"
         info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].user)}\n"
         info_str += f"pub_card: {self.game.pub_cards}, last_bet {self.game.lastBet}, permitCheck {self.game.permitCheck}\n"
         for player in self.players:
