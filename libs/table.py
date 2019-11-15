@@ -111,7 +111,7 @@ class Table:
             # TODO: prefer check over flod
             self.game.pfold(exe_pos)
             bgame.send_to_channel_by_table_id(
-                self.uid, f"timeout: {get_mentioned_string(self.players[exe_pos])} fold")
+                self.uid, f"timeout: {get_mentioned_string(self.players[exe_pos].user)} fold")
             self.countdown = MAX_AWAIT
             return False
 
@@ -122,14 +122,14 @@ class Table:
             self.cur_round = round_status
             self.countdown = MAX_AWAIT
             self.msg_ts, err = bgame.send_to_channel_by_table_id(
-                self.uid, f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos])} to act (remaining {self.countdown}s)")
+                self.uid, f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
             if err is not None:
                 raise RuntimeError  # TODO: fix later
 
         elif exe_pos == self.wait_on_pos:
             self.countdown -= 1
             err = bgame.update_msg_by_table_id(self.uid, self.msg_ts,
-                                               f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos])} to act (remaining {self.countdown}s)")
+                                               f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
 
         if round_status == "END":
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
