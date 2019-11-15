@@ -56,6 +56,7 @@ class Game(object):
         self.pub_cards = []
         self.lastBet = 0
         self.result = Result()
+        self.permitCheck = False
 
     def init_game(self, players: List[Player], ante: int, btn: int):
         self.players = players
@@ -141,12 +142,13 @@ class Game(object):
                 self.end()
             self.roundStatus = RoundStatus(self.roundStatus.value + 1)
             self.lastBet = 0
+            self.permitCheck = True
             # sb first
             self.exe_pos = self.sb
 
     def gend(self):
         # continue round until end
-        self.roundStatus
+        self.permitCheck = True
         if self.roundStatus.value < RoundStatus.FLOP.value:
             self.flop()
         if self.roundStatus.value < RoundStatus.TURN.value:
@@ -172,6 +174,9 @@ class Game(object):
                     self.result.set_result(player, self.total_pot)
                 else:
                     self.result.set_result(player, -player.chipBet)
+
+            self.roundStatus = RoundStatus.END
+            self.game_status = GameStatus.WAITING
             return
 
         players = []
