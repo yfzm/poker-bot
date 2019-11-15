@@ -45,6 +45,8 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
         check(web_client, channel, user)
     elif text == "fold":
         fold(web_client, channel, user)
+    elif text == "info":
+        echo_info(web_client, channel)
     else:
         if mentioned:
             send_msg(web_client, channel, HELP_MSG, user)
@@ -150,6 +152,11 @@ def fold(web_client: slack.WebClient, channel: str, user: str):
         send_msg(web_client, channel, f"{user} has folded")
     else:
         send_msg(web_client, channel, err)
+
+
+def echo_info(web_client: slack.WebClient, channel: str):
+    table_id = channels[channel].table_id
+    send_msg(web_client, channel, gameManager.get_game_info(table_id))
 
 
 def send_to_channel_by_table_id(table_id, msg):

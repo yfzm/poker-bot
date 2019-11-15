@@ -69,6 +69,10 @@ class GameManager:
         table = self.tables[table_id]
         table.timer_function()
 
+    def get_game_info(self, table_id) -> str:
+        table = self.tables[table_id]
+        return table.get_game_info()
+
 
 gameManager = GameManager()
 

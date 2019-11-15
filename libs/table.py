@@ -162,3 +162,15 @@ class Table:
         player_pos = self.players_user2pos[user_id]
         if self.game.pallin(player_pos) != 0:
             return f"{get_mentioned_string(user_id)}, invalid all in"
+
+    def get_game_info(self) -> str:
+        info_str = f"{self.game.game_status.name} {self.game.get_round_status_name()}\n"
+        info_str += f"btn: {self.game.btn} {get_mentioned_string(self.players[self.game.btn].user)}\n"
+        info_str += f"sb: {self.game.btn} {get_mentioned_string(self.players[self.game.sb].user)}\n"
+        info_str += f"bb: {self.game.btn} {get_mentioned_string(self.players[self.game.bb].user)}\n"
+        info_str += f"utg: {self.game.btn} {get_mentioned_string(self.players[self.game.utg].user)}\n"
+        info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].user)}\n"
+        info_str += f"pub_card: {self.game.pub_cards}, last_bet {self.game.lastBet}, permitCheck {self.game.permitCheck}\n"
+        for player in self.players:
+            info_str += f"{get_mentioned_string(player.user)}: total_bet {player.chipBet}, cards {player.cards}, active {player.active}, status {player.status.name}\n"
+        return info_str

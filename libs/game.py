@@ -43,18 +43,24 @@ class Game(object):
     def __init__(self):
         self.players = []
         self.game_status: GameStatus = GameStatus.WAITING
+        self.roundStatus: RoundStatus = None
         self.nplayers = 0
         self.deck: Deck = None
         self.btn = 0
+        self.sb = 0
+        self.bb = 0
+        self.utg = 0
         self.ante = 0
         self.exe_pos = 0
         self.total_pot = 0
         self.pub_cards = []
+        self.lastBet = 0
         self.result = Result()
 
     def init_game(self, players: List[Player], ante: int, btn: int):
         self.players = players
         # self.game_status = GameStatus.WAITFORPLAYERREADY
+        self.roundStatus = RoundStatus.PREFLOP
         self.nplayers = len(self.players)
         self.deck = Deck()
         self.btn = btn
@@ -81,7 +87,6 @@ class Game(object):
         #         return -1
         # all the players are ready
         self.game_status = GameStatus.RUNNING
-        self.roundStatus = RoundStatus.PREFLOP
 
         # deal all players
         for player in self.players:
