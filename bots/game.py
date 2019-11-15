@@ -101,8 +101,11 @@ def start_game(web_client: slack.WebClient, channel: str, user: str):
         send_msg(web_client, channel, err)
         return
     for hand in hands:
-        send_private_msg_in_channel(
-            web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
+        if not hand['id'].startswith("bot"):
+            send_private_msg_in_channel(
+                web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
+        else:
+            send_msg(web_client, channel, f"{hand['id']} has {hand['hand']}")
     send_msg(web_client, channel,
              "Game started! I have send your hand to you personnaly.")
     threading.Thread(target=gameManager.start_timer,

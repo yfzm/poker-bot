@@ -22,6 +22,7 @@ class RoundStatus(IntEnum):
 
 def status(ss):
     def dec(func):
+        @wraps(func)
         def wrapper(self, *args, **kwargs):
             if self.game_status in ss:
                 return func(self, *args, **kwargs)
