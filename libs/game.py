@@ -151,6 +151,7 @@ class Game(object):
                 self.river()
             elif self.roundStatus == RoundStatus.RIVER:
                 self.end()
+                return
             self.roundStatus = RoundStatus(self.roundStatus.value + 1)
             # self.lastBet = 0
             self.permitCheck = True
@@ -218,7 +219,7 @@ class Game(object):
             self.win_pot(p, exclude_players)
             exclude_players.append(p)
 
-        # self.roundStatus = RoundStatus.END
+        self.roundStatus = RoundStatus.END
         self.game_status = GameStatus.WAITING
 
     def get_active_player_num(self):
@@ -255,7 +256,7 @@ class Game(object):
         # end of a game
         if self.get_active_player_num() == 1:
             self.end()
-            self.roundStatus = RoundStatus.END
+            # self.roundStatus = RoundStatus.END
         else:
             self.invokeNextPlayer()
         return 0

@@ -15,6 +15,9 @@ class PokerBot:
         self.table = table_id
 
     def react(self, game: Game):
+        if not game.players[self.pos].is_playing():
+            # print("not playing")
+            return
         if game.permitCheck:
             if game.pcheck(self.pos):
                 bgame.send_to_channel_by_table_id(
