@@ -16,8 +16,6 @@ MAX_AWAIT = 600
 INITIAL_CHIPS = 500
 BOT_NUM = 3
 
-poker_bots: Dict[int, PokerBot] = {}
-
 
 class Table:
     def __init__(self, owner: str):
