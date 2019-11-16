@@ -61,7 +61,7 @@ class Game(object):
         self.exe_pos = 0
         self.total_pot = 0
         self.pub_cards = []
-        self.lastBet = 0
+        self.highest_bet = 0
         self.result = Result()
         self.permitCheck = False
 
@@ -77,7 +77,7 @@ class Game(object):
         self.ante = ante
         self.exe_pos = -1
         self.pub_cards = []
-        self.lastBet = 0
+        self.highest_bet = 0
         self.result = Result()
         self.total_pot = 0
 
@@ -117,7 +117,7 @@ class Game(object):
 
         self.putChip(self.sb, self.ante / 2, 'SB')
         self.putChip(self.bb, self.ante, 'BB')
-        self.lastBet = self.ante
+        self.highest_bet = self.ante
         self.permitCheck = False
 
         return 0
@@ -152,7 +152,7 @@ class Game(object):
             elif self.roundStatus == RoundStatus.RIVER:
                 self.end()
             self.roundStatus = RoundStatus(self.roundStatus.value + 1)
-            self.lastBet = 0
+            # self.lastBet = 0
             self.permitCheck = True
             # sb first
             self.exe_pos = self.sb
@@ -230,19 +230,18 @@ class Game(object):
 
     def putChip(self, pos, num, action):
         player = self.players[pos]
-        if player.chip < num:
+        remaining_chip = player.get_remaining_chip()
+        if remaining_chip < num:
             return -1
-        # allin
-        elif player.chip == num:
+        if remaining_chip == num:
             player.set_allin()
-            action = 'ALLIN'
-        player.chipBet = num
+        player.chipBet += num
         self.total_pot += num
         return 0
 
     @status([GameStatus.RUNNING])
     def pcall(self, pos):
-        if pos != self.exe_pos or self.putChip(pos, self.lastBet, 'CALL') < 0:
+        if pos != self.exe_pos or self.putChip(pos, self.highest_bet - self.players[pos].chipBet, 'CALL') < 0:
             return -1
         self.invokeNextPlayer()
         return 0
@@ -270,13 +269,14 @@ class Game(object):
 
     @status([GameStatus.RUNNING])
     def praise(self, pos, num):
-        if (pos != self.exe_pos or num < self.lastBet * 2):
+        # TODO: check valid raise: the diff is bigger than the last diff
+        if (pos != self.exe_pos):
             return -1
 
         self.nextRound = self.exe_pos
-        self.lastBet = num
         self.permitCheck = False
         self.putChip(pos, num, 'RAISE')
+        self.highest_bet = self.players[pos].chipBet
         self.invokeNextPlayer()
         return 0
 
@@ -286,11 +286,11 @@ class Game(object):
             return -1
 
         # does allin raise the chip?
-        if self.lastBet < self.players[pos].chip:
+        if self.players[pos].chip > self.highest_bet:
+            self.highest_bet = self.players[pos].chip
             self.nextRound = self.exe_pos
-            self.lastBet = self.players[pos].chip
-        self.permitCheck = False
-        self.putChip(pos, self.players[pos].chip, 'ALLIN')
+            self.permitCheck = False  # TODO: necessary?
+        self.putChip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
         self.invokeNextPlayer()
         return 0
 

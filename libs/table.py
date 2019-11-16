@@ -176,7 +176,7 @@ class Table:
         info_str += f"bb: {self.game.bb} {get_mentioned_string(self.players[self.game.bb].user)}\n"
         info_str += f"utg: {self.game.utg} {get_mentioned_string(self.players[self.game.utg].user)}\n"
         info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].user)}\n"
-        info_str += f"pub_card: {self.game.pub_cards}, last_bet {self.game.lastBet}, permitCheck {self.game.permitCheck}\n"
+        info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}, permitCheck {self.game.permitCheck}\n"
         for player in self.players:
             info_str += f"{get_mentioned_string(player.user)}: total_bet {player.chipBet}, cards {player.cards}, active {player.active}, status {player.status.name}\n"
         return info_str

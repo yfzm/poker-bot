@@ -24,6 +24,9 @@ class Player:
         self.status = PlayerStatus.PLAYING
         self.rank = None
         self.hand = None
+    
+    def get_remaining_chip(self) -> int:
+        return self.chip - self.chipBet
 
     def is_playing(self) -> bool:
         return self.status == PlayerStatus.PLAYING
