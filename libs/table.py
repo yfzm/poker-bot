@@ -144,10 +144,16 @@ class Table:
 
         if round_status == "END":
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
+            self.show_result(self.game.result)
             return True
 
         self.exe_pos_local = exe_pos
         return False
+
+    def show_result(self, result: lgame.Result):
+        for player, chip in result.chip_changes.items():
+            r = "win" if chip > 0 else "lose"
+            bgame.send_to_channel_by_table_id(self.uid, f"{get_mentioned_string(player.name)} {r} {abs(chip)}\n")
 
     def check(self, user_id) -> str:
         player_pos = self.players_user2pos[user_id]
