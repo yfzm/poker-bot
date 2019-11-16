@@ -65,6 +65,7 @@ class Table:
         self.btn = 0
         self.ante = 20
         self.counter = 0  # number of games
+        self.timer_thread = thread.Thread(target=self.timer_function)
 
     def join(self, user_id):
         """Join a table, return (pos, nplayer, err)"""
@@ -91,7 +92,13 @@ class Table:
                 "id": player.user,
                 "hand": self.game.getCardsByPos(pos)
             })
+        self.timer_thread.start()
         return hands, None
+
+    def continue_game(self, user_id):
+        self.timer_thread.join()
+        self.btn = (self.btn + 1) % len(self.players)
+        return self.start(user_id)
 
     def timer_function(self):
         while True:
