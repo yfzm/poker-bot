@@ -7,7 +7,7 @@ from typing import List, Dict
 
 
 import libs.game as lgame
-import bots.game as bgame 
+import bots.game as bgame
 from slackapi.client import get_mentioned_string
 from .poker_bot import PokerBot
 from .player import Player, PlayerStatus
@@ -48,7 +48,6 @@ class Table:
         """Start a game, return (hands, err)"""
         if user_id != self.owner:
             return None, "Failed to start, because only the one who open the table can start the game"
-        self.add_bot_player()
         # if len(players) < 2:
         #     return None, "Failed to start, because this game requires at least TWO players"
         self.game.start(self.players, self.ante, self.btn)
@@ -68,7 +67,7 @@ class Table:
 
     def add_bot_player(self):
         pos, tot, err = self.join(f"bot_player_{len(self.players)}")
-        if  tot <= 0 or err is not None:
+        if tot <= 0 or err is not None:
             return err
         self.poker_bots[pos] = PokerBot(pos, self.uid)
         bgame.send_to_channel_by_table_id(self.uid, f"bot {pos} has joined")
