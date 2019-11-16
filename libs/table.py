@@ -7,7 +7,7 @@ from typing import List, Dict
 
 
 import libs.game as lgame
-import bots.game as bgame
+import bots.game as bgame 
 from slackapi.client import get_mentioned_string
 from .poker_bot import PokerBot
 from .player import Player, PlayerStatus
@@ -67,17 +67,17 @@ class Table:
         return self.start(user_id)
 
     def add_bot_player(self):
-        for i in range(BOT_NUM):
-            pos, tot, err = self.join(f"bot_player_{len(self.players)}")
-            assert tot > 0 and err is None
-            self.poker_bots[pos] = PokerBot(pos, self.uid)
-            print(f"add bot {pos}")
-            bgame.send_to_channel_by_table_id(self.uid, f"bot {pos} has joined")
+        pos, tot, err = self.join(f"bot_player_{len(self.players)}")
+        if  tot <= 0 or err is not None:
+            return err
+        self.poker_bots[pos] = PokerBot(pos, self.uid)
+        bgame.send_to_channel_by_table_id(self.uid, f"bot {pos} has joined")
+        return None
 
     def bot_function(self):
         game = self.game
         pos = game.exe_pos
-        if pos in poker_bots:
+        if pos in self.poker_bots:
             self.poker_bots[pos].react(game)
 
     def timer_function(self):

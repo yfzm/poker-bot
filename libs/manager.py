@@ -49,6 +49,10 @@ class GameManager:
         table = self.tables[table_id]
         return table.continue_game(user_id)
 
+    def add_bot(self, table_id):
+        table = self.tables[table_id]
+        return table.add_bot_player()
+
     def check(self, table_id, user_id) -> str:
         """Check, return err"""
         table = self.tables[table_id]
