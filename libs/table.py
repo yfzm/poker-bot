@@ -65,6 +65,7 @@ class Table:
         self.btn = 0
         self.ante = 20
         self.counter = 0  # number of games
+        self.timer_thread = thread.Thread(target=self.timer_function)
 
     def join(self, user_id):
         """Join a table, return (pos, nplayer, err)"""
@@ -91,7 +92,13 @@ class Table:
                 "id": player.user,
                 "hand": self.game.getCardsByPos(pos)
             })
+        self.timer_thread.start()
         return hands, None
+
+    def continue_game(self, user_id):
+        self.timer_thread.join()
+        self.btn = (self.btn + 1) % len(self.players)
+        return self.start(user_id)
 
     def timer_function(self):
         while True:
@@ -144,10 +151,16 @@ class Table:
 
         if round_status == "END":
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
+            self.show_result(self.game.result)
             return True
 
         self.exe_pos_local = exe_pos
         return False
+
+    def show_result(self, result: lgame.Result):
+        for player, chip in result.chip_changes.items():
+            r = "win" if chip > 0 else "lose"
+            bgame.send_to_channel_by_table_id(self.uid, f"{get_mentioned_string(player.name)} {r} {abs(chip)}\n")
 
     def check(self, user_id) -> str:
         player_pos = self.players_user2pos[user_id]

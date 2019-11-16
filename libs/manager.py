@@ -90,6 +90,10 @@ class GameManager:
         thread.Thread(target=self.bot_function, args=[table_id]).start()
         return table.start(user_id)
 
+    def continue_game(self, table_id, user_id):
+        table = self.tables[table_id]
+        return table.continue_game(user_id)
+
     def add_bot_player(self, table_id, user_id):
         for i in range(len(self.tables[table_id].players), 4):
             pos, tot, err = self.join(table_id, f"bot_player_{i}")
@@ -127,9 +131,9 @@ class GameManager:
         table = self.tables[table_id]
         return table.all_in(user_id)
 
-    def start_timer(self, table_id) -> None:
-        table = self.tables[table_id]
-        table.timer_function()
+    # def start_timer(self, table_id) -> None:
+    #     table = self.tables[table_id]
+    #     table.timer_function()
 
     def get_game_info(self, table_id) -> str:
         table = self.tables[table_id]

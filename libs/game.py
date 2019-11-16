@@ -36,13 +36,19 @@ class Result:
     def __init__(self):
         self.chip_changes: Dict[Player, int] = dict()
 
-    def set_result(self, player: Player, chip_change: int):
-        self.chip_changes[player] = chip_change
+    def add_result(self, player: Player, chip: int):
+        self.chip_changes[player] = chip
+
+    def win_bet(self, player: Player, chip: int):
+        self.chip_changes[player] += chip
+
+    def lose_bet(self, player: Player, chip: int):
+        self.chip_changes[player] -= chip
 
 
 class Game(object):
     def __init__(self):
-        self.players = []
+        self.players: List[Player] = []
         self.game_status: GameStatus = GameStatus.WAITING
         self.roundStatus: RoundStatus = None
         self.nplayers = 0
@@ -168,30 +174,45 @@ class Game(object):
     def river(self):
         self.pub_cards.append(self.deck.getCard())
 
+    def win_pot(self, winner: Player, exclude_players: List[Player]):
+        """Calculate how many chips the `winner` wins and set result for all players
+
+        Args:
+            winner (Player): the winner
+            exclude_players (List[Player]): players in this list will not lose chips
+                to `winner`, because they have a bigger hand
+        """
+        total_win = 0
+        for player in self.players:
+            if player == winner or player in exclude_players:
+                continue
+            could_win = min(player.chipBet, winner.chipBet)
+            total_win += could_win
+            self.result.lose_bet(player, could_win)
+            player.chipBet -= could_win
+        self.result.win_bet(winner, total_win)
+
     def end(self):
-        if self.get_active_player_num() == 1:
-            for player in self.players:
-                if player.active and not player.is_fold():
-                    self.result.set_result(player, self.total_pot)
-                else:
-                    self.result.set_result(player, -player.chipBet)
+        # Initialize self.result
+        for player in self.players:
+            self.result.add_result(player, 0)
+        
+        active_players: List[Player] = list(filter(lambda p: p.active), self.players)
+        if len(active_players) == 0:
+            raise RuntimeError("No active player?")
 
-            self.roundStatus = RoundStatus.END
-            self.game_status = GameStatus.WAITING
-            return
+        # Only when there are more than two active players, comparision is needed
+        if len(active_players) >= 2:
+            for p in active_players:
+                rank, hand = poker7(map(lambda card: str(card), p.cards + self.pub_cards))
+                p.set_rank_and_hand(self.pub_cards, rank, hand)
+            active_players.sort(key=lambda p: p.rank, reverse=True)
 
-        players = []
-        for p in self.players:
-            if p.active:
-                p.chip = p.chip - p.chipBet
-                if not p.is_fold():  # TODO: 有其他玩家时才去比大小                        
-                    rank, hand = poker7(map(lambda card: str(card), p.cards + self.pub_cards))
-                    p.set_rank_and_hand(self.pub_cards, rank, hand)
-                    players.append(p)
+        exclude_players = []
+        for p in active_players:
+            self.win_pot(p, exclude_players)
+            exclude_players.append(p)
 
-        def take_rank(p):
-            return p.rank
-        players.sort(key=take_rank, reverse=True)
         self.roundStatus = RoundStatus.END
         self.game_status = GameStatus.WAITING
 
