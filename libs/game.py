@@ -44,6 +44,10 @@ class Result:
 
     def lose_bet(self, player: Player, chip: int):
         self.chip_changes[player] -= chip
+    
+    def execute(self):
+        for player, chip in self.chip_changes.items():
+            player.chip += chip
 
 
 class Game(object):
@@ -115,7 +119,7 @@ class Game(object):
         self.exe_pos = self.utg
         self.nextRound = self.utg
 
-        self.putChip(self.sb, self.ante / 2, 'SB')
+        self.putChip(self.sb, self.ante // 2, 'SB')
         self.putChip(self.bb, self.ante, 'BB')
         self.highest_bet = self.ante
         self.permitCheck = False
