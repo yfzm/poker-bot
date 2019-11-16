@@ -34,6 +34,7 @@ class Table:
         self.ante = 20
         self.counter = 0  # number of games
         self.timer_thread = thread.Thread(target=self.timer_function)
+        self.poker_bots: Dict[int, PokerBot] = {}
 
     def join(self, user_id):
         """Join a table, return (pos, nplayer, err)"""
@@ -71,7 +72,7 @@ class Table:
         for i in range(BOT_NUM):
             pos, tot, err = self.join(f"bot_player_{len(self.players)}")
             assert tot > 0 and err is None
-            poker_bots[pos] = PokerBot(pos, self.uid)
+            self.poker_bots[pos] = PokerBot(pos, self.uid)
             print(f"add bot {pos}")
             bgame.send_to_channel_by_table_id(self.uid, f"bot {pos} has joined")
 
@@ -79,7 +80,7 @@ class Table:
         game = self.game
         pos = game.exe_pos
         if pos in poker_bots:
-            poker_bots[pos].react(game)
+            self.poker_bots[pos].react(game)
 
     def timer_function(self):
         while True:
