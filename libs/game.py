@@ -4,7 +4,7 @@ from .card import Card
 from .pokerCmp import poker7
 import random
 from typing import List, Dict
-from .table import Player, PlayerStatus
+from .player import Player, PlayerStatus
 
 
 class GameStatus(IntEnum):

@@ -19,46 +19,6 @@ class Status(Enum):
     END_HAND = 4
 
 
-poker_bots: Dict[int, PokerBot] = {}
-
-
-class PokerBot:
-    def __init__(self, pos, chip, table):
-        self.chip = chip
-        self.pos = pos
-        self.table = table
-
-    def react(self, game: Game):
-        if game.permitCheck:
-            if game.pcheck(self.pos):
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} check fail")
-            else:
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} check")
-        elif self.chip >= game.lastBet and game.lastBet > 2:
-            if game.pcall(self.pos):
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} call fail")
-            else:
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} call")
-        elif self.chip >= game.lastBet:
-            if game.praise(self.pos, 2 if game.lastBet == 0 else 2 * game.lastBet):
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} raise fail")
-            else:
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} raise {game.lastBet}")
-        else:
-            if game.pfold(self.pos):
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} fold fail")
-            else:
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} fold")
-
-
 class GameManager:
     def __init__(self):
         self.tables: Dict[str, Table] = dict()
@@ -83,32 +43,7 @@ class GameManager:
     def start(self, table_id, user_id):
         """Start a game, return (hands, err)"""
         table = self.tables[table_id]
-        # if len(players) < 2:
-        #     return None, "Failed to start, because this game requires at least TWO players"
-        self.add_bot_player(table_id, user_id)
-        # FIXME: only for test
-        thread.Thread(target=self.bot_function, args=[table_id]).start()
         return table.start(user_id)
-
-    def continue_game(self, table_id, user_id):
-        table = self.tables[table_id]
-        return table.continue_game(user_id)
-
-    def add_bot_player(self, table_id, user_id):
-        for i in range(len(self.tables[table_id].players), 4):
-            pos, tot, err = self.join(table_id, f"bot_player_{i}")
-            assert tot > 0 and err is None
-            poker_bots[i] = PokerBot(pos, 500, table_id)  # TODO: magic number
-            print(f"add bot {pos}")
-
-    def bot_function(self, table_id):
-        table = self.tables[table_id]
-        game = table.game
-        while True:
-            pos = game.exe_pos
-            if pos in poker_bots:
-                poker_bots[pos].react(game)
-            time.sleep(1)
 
     def check(self, table_id, user_id) -> str:
         """Check, return err"""
