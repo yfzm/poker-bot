@@ -15,6 +15,9 @@ class Player:
     def __init__(self, user: str):
         self.user = user
         self.chip = INITIAL_CHIPS
+        self.init()
+    
+    def init(self):
         self.chipBet = 0
         self.cards = [0] * 2
         self.active = True

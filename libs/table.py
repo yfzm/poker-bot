@@ -62,6 +62,7 @@ class Table:
 
     def continue_game(self, user_id):
         self.timer_thread.join()
+        self.timer_thread = thread.Thread(target=self.timer_function)
         self.btn = (self.btn + 1) % len(self.players)
         return self.start(user_id)
 

@@ -67,6 +67,8 @@ class Game(object):
 
     def init_game(self, players: List[Player], ante: int, btn: int):
         self.players = players
+        for player in self.players:
+            player.init()
         # self.game_status = GameStatus.WAITFORPLAYERREADY
         self.roundStatus = RoundStatus.PREFLOP
         self.nplayers = len(self.players)
@@ -75,6 +77,8 @@ class Game(object):
         self.ante = ante
         self.exe_pos = -1
         self.pub_cards = []
+        self.lastBet = 0
+        self.result = Result()
         self.total_pot = 0
 
     def getCardsByPos(self, pos):
