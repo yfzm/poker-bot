@@ -71,7 +71,8 @@ def create_table(web_client: slack.WebClient, channel: str, user: str):
     channels[channel] = ChannelInfo(table_id, web_client)
     send_msg(web_client, channel,
              "Successfully opened a game! Everyone is free to join the table.")
-
+    send_msg(web_client, channel,
+             f"is the table owner and just sat at position 0", user)
 
 def join_table(web_client: slack.WebClient, channel: str, user: str):
     # TODO: use wrapper to check channel
