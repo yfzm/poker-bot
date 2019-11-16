@@ -69,9 +69,9 @@ class Table:
 
     def add_bot_player(self):
         for i in range(BOT_NUM):
-            pos, tot, err = self.join(f"bot_player_{i}")
+            pos, tot, err = self.join(f"bot_player_{len(self.players)}")
             assert tot > 0 and err is None
-            poker_bots[i] = PokerBot(pos, self.uid)
+            poker_bots[pos] = PokerBot(pos, self.uid)
             print(f"add bot {pos}")
             bgame.send_to_channel_by_table_id(self.uid, f"bot {pos} has joined")
 

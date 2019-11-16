@@ -197,7 +197,7 @@ class Game(object):
         for player in self.players:
             self.result.add_result(player, 0)
         
-        active_players: List[Player] = list(filter(lambda p: p.active), self.players)
+        active_players: List[Player] = list(filter(lambda p: p.active, self.players))
         if len(active_players) == 0:
             raise RuntimeError("No active player?")
 
