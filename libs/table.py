@@ -48,7 +48,6 @@ class Table:
         """Start a game, return (hands, err)"""
         if user_id != self.owner:
             return None, "Failed to start, because only the one who open the table can start the game"
-        self.add_bot_player()
         # if len(players) < 2:
         #     return None, "Failed to start, because this game requires at least TWO players"
         self.game.start(self.players, self.ante, self.btn)
@@ -67,17 +66,17 @@ class Table:
         return self.start(user_id)
 
     def add_bot_player(self):
-        for i in range(BOT_NUM):
-            pos, tot, err = self.join(f"bot_player_{len(self.players)}")
-            assert tot > 0 and err is None
-            self.poker_bots[pos] = PokerBot(pos, self.uid)
-            print(f"add bot {pos}")
-            bgame.send_to_channel_by_table_id(self.uid, f"bot {pos} has joined")
+        pos, tot, err = self.join(f"bot_player_{len(self.players)}")
+        if tot <= 0 or err is not None:
+            return err
+        self.poker_bots[pos] = PokerBot(pos, self.uid)
+        bgame.send_to_channel_by_table_id(self.uid, f"bot {pos} has joined")
+        return None
 
     def bot_function(self):
         game = self.game
         pos = game.exe_pos
-        if pos in poker_bots:
+        if pos in self.poker_bots:
             self.poker_bots[pos].react(game)
 
     def timer_function(self):

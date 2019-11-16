@@ -49,6 +49,8 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
         continue_game(web_client, channel, user)
     elif text == "info":
         echo_info(web_client, channel)
+    elif text == "bot":
+        add_bot(web_client, channel)
     else:
         if mentioned:
             send_msg(web_client, channel, HELP_MSG, user)
@@ -132,6 +134,17 @@ def continue_game(web_client: slack.WebClient, channel: str, user: str):
             send_msg(web_client, channel, f"{hand['id']} has {hand['hand']}")
     send_msg(web_client, channel,
              "Game started! I have send your hand to you personnaly.")
+
+def add_bot(web_client: slack.WebClient, channel: str):
+    if channel not in channels.keys():
+        send_msg(web_client, channel,
+                 "Failed to continue, because there is no opened game in this channel.")
+        return
+    table_id = channels[channel].table_id
+    err = gameManager.add_bot(table_id)
+    if err is not None:
+        send_msg(web_client, channel, err)
+        return
 
 def bet(web_client: slack.WebClient, channel: str, user: str, chip):
     table_id = channels[channel].table_id
