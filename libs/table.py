@@ -1,54 +1,20 @@
 from enum import Enum
-import libs.game as lgame
-import threading as thread
 from typing import Callable
 import time
-import bots.game as bgame
-from typing import List, Dict
-from slackapi.client import get_mentioned_string
+import threading as thread
 import uuid
+from typing import List, Dict
+
+
+import libs.game as lgame
+import bots.game as bgame
+from slackapi.client import get_mentioned_string
+from .poker_bot import PokerBot
+from .player import Player, PlayerStatus
 
 MAX_AWAIT = 600
 INITIAL_CHIPS = 500
-
-class PlayerStatus(Enum):
-    PLAYING = 0
-    FOLD = 1
-    ALLIN = 2
-    # OFFLINE = 3
-
-class Player:
-    def __init__(self, user: str):
-        self.user = user
-        self.chip = INITIAL_CHIPS
-        self.chipBet = 0
-        self.cards = [0] * 2
-        self.active = True
-        self.status = PlayerStatus.PLAYING
-        self.rank = None
-        self.hand = None
-    
-    def is_playing(self) -> bool:
-        return self.status == PlayerStatus.PLAYING
-
-    def is_fold(self) -> bool:
-        return self.status == PlayerStatus.FOLD
-
-    def is_allin(self) -> bool:
-        return self.status == PlayerStatus.ALLIN
-
-    def set_playing(self) -> None:
-        self.status = PlayerStatus.PLAYING
-
-    def set_fold(self) -> None:
-        self.status = PlayerStatus.FOLD
-
-    def set_allin(self) -> None:
-        self.status = PlayerStatus.ALLIN
-
-    def set_rank_and_hand(self, rank, hand):
-        self.rank = rank
-        self.hand = hand
+BOT_NUM = 3
 
 
 class Table:
@@ -66,6 +32,7 @@ class Table:
         self.ante = 20
         self.counter = 0  # number of games
         self.timer_thread = thread.Thread(target=self.timer_function)
+        self.poker_bots: Dict[int, PokerBot] = {}
 
     def join(self, user_id):
         """Join a table, return (pos, nplayer, err)"""
@@ -75,14 +42,13 @@ class Table:
         player = Player(user_id)
         self.players.append(player)
         self.players_user2pos[player.user] = pos
-        # self.game.setPlayer(pos, INITIAL_CHIPS)
-        # self.game.setReady(pos)
         return pos, pos + 1, None
 
     def start(self, user_id):
         """Start a game, return (hands, err)"""
         if user_id != self.owner:
             return None, "Failed to start, because only the one who open the table can start the game"
+        self.add_bot_player()
         # if len(players) < 2:
         #     return None, "Failed to start, because this game requires at least TWO players"
         self.game.start(self.players, self.ante, self.btn)
@@ -100,10 +66,25 @@ class Table:
         self.btn = (self.btn + 1) % len(self.players)
         return self.start(user_id)
 
+    def add_bot_player(self):
+        for i in range(BOT_NUM):
+            pos, tot, err = self.join(f"bot_player_{len(self.players)}")
+            assert tot > 0 and err is None
+            self.poker_bots[pos] = PokerBot(pos, self.uid)
+            print(f"add bot {pos}")
+            bgame.send_to_channel_by_table_id(self.uid, f"bot {pos} has joined")
+
+    def bot_function(self):
+        game = self.game
+        pos = game.exe_pos
+        if pos in poker_bots:
+            self.poker_bots[pos].react(game)
+
     def timer_function(self):
         while True:
             starttime = time.time()
             should_stop = self.mainloop()
+            self.bot_function()
             if should_stop:
                 break
             elapsed_time = time.time() - starttime
@@ -147,7 +128,7 @@ class Table:
             # so, we should update the message and decrease the countdown
             self.countdown -= 1
             bgame.update_msg_by_table_id(self.uid, self.msg_ts,
-                f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
+                                         f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
 
         if round_status == "END":
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
@@ -160,7 +141,8 @@ class Table:
     def show_result(self, result: lgame.Result):
         for player, chip in result.chip_changes.items():
             r = "win" if chip > 0 else "lose"
-            bgame.send_to_channel_by_table_id(self.uid, f"{get_mentioned_string(player.name)} {r} {abs(chip)}\n")
+            bgame.send_to_channel_by_table_id(
+                self.uid, f"{get_mentioned_string(player.name)} {r} {abs(chip)}\n")
 
     def check(self, user_id) -> str:
         player_pos = self.players_user2pos[user_id]
