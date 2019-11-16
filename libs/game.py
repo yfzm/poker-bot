@@ -152,6 +152,7 @@ class Game(object):
             self.permitCheck = True
             # sb first
             self.exe_pos = self.sb
+            self.nextRound = self.sb
 
     def gend(self):
         # continue round until end
@@ -213,7 +214,7 @@ class Game(object):
             self.win_pot(p, exclude_players)
             exclude_players.append(p)
 
-        self.roundStatus = RoundStatus.END
+        # self.roundStatus = RoundStatus.END
         self.game_status = GameStatus.WAITING
 
     def get_active_player_num(self):
@@ -251,6 +252,7 @@ class Game(object):
         # end of a game
         if self.get_active_player_num() == 1:
             self.end()
+            self.roundStatus = RoundStatus.END
         else:
             self.invokeNextPlayer()
         return 0
