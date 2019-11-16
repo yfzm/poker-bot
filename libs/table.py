@@ -48,8 +48,8 @@ class Table:
         """Start a game, return (hands, err)"""
         if user_id != self.owner:
             return None, "Failed to start, because only the one who open the table can start the game"
-        # if len(players) < 2:
-        #     return None, "Failed to start, because this game requires at least TWO players"
+        if len(self.players) < 2:
+            return None, "Failed to start, because this game requires at least TWO players"
         self.game.start(self.players, self.ante, self.btn)
         hands = []
         for pos, player in enumerate(self.players):
