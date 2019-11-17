@@ -16,7 +16,7 @@ def flush(cards):
 
 def kind(n, ranks):
     for r in ranks:
-        if (ranks.count(r) == n):
+        if ranks.count(r) == n:
             return r
     return None
 
@@ -52,7 +52,7 @@ def hand_rank(hand):
 def poker7(cards):
     hands = combinations(cards, 5)
     hand = max(hands, key=hand_rank)
-    return {'hand': hand, 'rank': hand_rank(hand)}
+    return hand, hand_rank(hand)
 
 if __name__ == '__main__':
     cards = "2s 3d 4s 5s As 9s Ts".split()
