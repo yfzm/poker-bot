@@ -18,7 +18,7 @@ class PokerBot:
         if not game.players[self.pos].is_playing():
             # print("not playing")
             return
-        if game.permitCheck:
+        if game.is_check_permitted(self.pos):
             if game.pcheck(self.pos):
                 bgame.send_to_channel_by_table_id(
                     self.table, f"bot {self.pos} check fail")
