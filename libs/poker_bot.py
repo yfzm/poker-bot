@@ -15,27 +15,30 @@ class PokerBot:
         self.table = table_id
 
     def react(self, game: Game):
-        if game.permitCheck:
+        if not game.players[self.pos].is_playing():
+            # print("not playing")
+            return
+        if game.is_check_permitted(self.pos):
             if game.pcheck(self.pos):
                 bgame.send_to_channel_by_table_id(
                     self.table, f"bot {self.pos} check fail")
             else:
                 bgame.send_to_channel_by_table_id(
                     self.table, f"bot {self.pos} check")
-        elif self.chip >= game.lastBet and game.lastBet > 2:
+        elif self.chip >= game.highest_bet:
             if game.pcall(self.pos):
                 bgame.send_to_channel_by_table_id(
                     self.table, f"bot {self.pos} call fail")
             else:
                 bgame.send_to_channel_by_table_id(
                     self.table, f"bot {self.pos} call")
-        elif self.chip >= game.lastBet:
-            if game.praise(self.pos, 2 if game.lastBet == 0 else 2 * game.lastBet):
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} raise fail")
-            else:
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} raise {game.lastBet}")
+        # elif self.chip >= game.lastBet:
+        #     if game.praise(self.pos, 2 if game.lastBet == 0 else 2 * game.lastBet):
+        #         bgame.send_to_channel_by_table_id(
+        #             self.table, f"bot {self.pos} raise fail")
+        #     else:
+        #         bgame.send_to_channel_by_table_id(
+        #             self.table, f"bot {self.pos} raise {game.lastBet}")
         else:
             if game.pfold(self.pos):
                 bgame.send_to_channel_by_table_id(

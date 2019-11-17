@@ -48,8 +48,8 @@ class Table:
         """Start a game, return (hands, err)"""
         if user_id != self.owner:
             return None, "Failed to start, because only the one who open the table can start the game"
-        # if len(players) < 2:
-        #     return None, "Failed to start, because this game requires at least TWO players"
+        if len(self.players) < 2:
+            return None, "Failed to start, because this game requires at least TWO players"
         self.game.start(self.players, self.ante, self.btn)
         hands = []
         for pos, player in enumerate(self.players):
@@ -62,6 +62,7 @@ class Table:
 
     def continue_game(self, user_id):
         self.timer_thread.join()
+        self.timer_thread = thread.Thread(target=self.timer_function)
         self.btn = (self.btn + 1) % len(self.players)
         return self.start(user_id)
 
@@ -131,6 +132,7 @@ class Table:
 
         if round_status == "END":
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
+            self.game.result.execute()
             self.show_result(self.game.result)
             return True
 
@@ -141,7 +143,7 @@ class Table:
         for player, chip in result.chip_changes.items():
             r = "win" if chip > 0 else "lose"
             bgame.send_to_channel_by_table_id(
-                self.uid, f"{get_mentioned_string(player.name)} {r} {abs(chip)}\n")
+                self.uid, f"{get_mentioned_string(player.user)} {r} {abs(chip)}\n")
 
     def check(self, user_id) -> str:
         player_pos = self.players_user2pos[user_id]
@@ -175,7 +177,9 @@ class Table:
         info_str += f"bb: {self.game.bb} {get_mentioned_string(self.players[self.game.bb].user)}\n"
         info_str += f"utg: {self.game.utg} {get_mentioned_string(self.players[self.game.utg].user)}\n"
         info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].user)}\n"
-        info_str += f"pub_card: {self.game.pub_cards}, last_bet {self.game.lastBet}, permitCheck {self.game.permitCheck}\n"
-        for player in self.players:
-            info_str += f"{get_mentioned_string(player.user)}: total_bet {player.chipBet}, cards {player.cards}, active {player.active}, status {player.status.name}\n"
+        info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}\n"
+        for pos, player in enumerate(self.players):
+            info_str += f"{get_mentioned_string(player.user)}: chip {player.chip}, total_bet {player.chipBet}, cards {player.cards}, "
+            info_str += f"can_check {self.game.is_check_permitted(pos)}, active {player.active}, status {player.status.name}, "
+            info_str += f"rank {player.rank}, hand {player.hand}\n"
         return info_str

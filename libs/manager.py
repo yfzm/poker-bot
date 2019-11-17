@@ -30,6 +30,7 @@ class GameManager:
     def open(self, user_id):
         table = Table(user_id)
         self.tables[table.uid] = table
+        self.join(table.uid, user_id)  # Error handling?
         return table.uid
 
     def join(self, table_id, user_id):
