@@ -20,7 +20,7 @@ a  for all in
 ca for call
 b  for bet
 """
-# CHANNEL_ID = 'CP3P9CS2W'
+
 
 class ChannelInfo:
     def __init__(self, table_id: str, client: slack.WebClient):
@@ -35,8 +35,9 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
         join_table(web_client, channel, user)
     elif text == "start":
         start_game(web_client, channel, user)
-    elif text.startswith("bet"):
-        bet(web_client, channel, user, 20)
+    elif re.search(r"^bet(\s)+(\d)+$", text) is not None:
+        chip = int(text.split()[1])
+        bet(web_client, channel, user, chip)
     elif text == "call":
         call(web_client, channel, user)
     elif text == "all":
@@ -56,8 +57,6 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
             send_msg(web_client, channel, HELP_MSG, user)
 
 
-# TODO: 教slackbot说中文
-# CHANNEL_ID = 'CP3P9CS2W'
 channels: Dict[str, ChannelInfo]  = dict()
 
 
@@ -113,8 +112,7 @@ def start_game(web_client: slack.WebClient, channel: str, user: str):
             send_msg(web_client, channel, f"{hand['id']} has {hand['hand']}")
     send_msg(web_client, channel,
              "Game started! I have send your hand to you personnaly.")
-    # threading.Thread(target=gameManager.start_timer,
-    #                  args=(table_id,)).start()
+
 
 def continue_game(web_client: slack.WebClient, channel: str, user: str):
     # TODO: Reduce redundant code

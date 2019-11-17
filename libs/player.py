@@ -8,7 +8,6 @@ class PlayerStatus(Enum):
     PLAYING = 0
     FOLD = 1
     ALLIN = 2
-    # OFFLINE = 3
 
 
 class Player:

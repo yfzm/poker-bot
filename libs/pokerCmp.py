@@ -16,7 +16,7 @@ def flush(cards):
 
 def kind(n, ranks):
     for r in ranks:
-        if (ranks.count(r) == n):
+        if ranks.count(r) == n:
             return r
     return None
 

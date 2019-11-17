@@ -143,7 +143,7 @@ class Table:
         for player, chip in result.chip_changes.items():
             r = "win" if chip >= 0 else "lose"
             bgame.send_to_channel_by_table_id(
-                self.uid, f"{get_mentioned_string(player.user)} {r} {abs(chip)}\n")
+                self.uid, f"{get_mentioned_string(player.user)} {r} {abs(chip)}, current chip: {player.chip}\n")
 
     def check(self, user_id) -> str:
         player_pos = self.players_user2pos[user_id]
