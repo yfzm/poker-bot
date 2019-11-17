@@ -9,7 +9,6 @@ rope = "*"
 autopep8 = "*"
 
 [packages]
-slackbot = "*"
 slackclient = "*"
 
 [requires]
