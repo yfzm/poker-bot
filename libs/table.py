@@ -179,5 +179,7 @@ class Table:
         info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].user)}\n"
         info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}\n"
         for pos, player in enumerate(self.players):
-            info_str += f"{get_mentioned_string(player.user)}: chip {player.chip}, total_bet {player.chipBet}, cards {player.cards}, can_check {self.game.is_check_permitted(pos)}, active {player.active}, status {player.status.name}\n"
+            info_str += f"{get_mentioned_string(player.user)}: chip {player.chip}, total_bet {player.chipBet}, cards {player.cards}, "
+            info_str += f"can_check {self.game.is_check_permitted(pos)}, active {player.active}, status {player.status.name}, "
+            info_str += f"rank {player.rank}, hand {player.hand}\n"
         return info_str

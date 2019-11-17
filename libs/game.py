@@ -214,7 +214,8 @@ class Game(object):
         # Only when there are more than two active players, comparision is needed
         if len(active_players) >= 2:
             for p in active_players:
-                rank, hand = poker7(map(lambda card: str(card), p.cards + self.pub_cards))
+                rank, hand = poker7(list(map(lambda card: str(card), p.cards + self.pub_cards)))
+                print(f"{rank}, {hand}")
                 p.set_rank_and_hand(rank, hand)
             active_players.sort(key=lambda p: p.rank, reverse=True)
 
