@@ -6,7 +6,6 @@ import time
 from slackapi.client import *
 from bots.game import handle_message
 
-# bot_userid = ""
 
 @slack.RTMClient.run_on(event="message")
 def test_rtm_client(**payload):
@@ -21,7 +20,6 @@ def test_rtm_client(**payload):
     web_client = payload["web_client"]
 
     text = data['text']
-    # print(text)
     channel = data['channel']
     ts = data['ts']
     user = data['user']
@@ -38,11 +36,6 @@ if __name__ == "__main__":
     ssl_context = ssl_lib.create_default_context(cafile=certifi.where())
     web_client = slack.WebClient(token=slack_token)
     bot_userid = web_client.auth_test()['user_id']
-    # ts = send_msg(web_client, "CP3P9CS2W", "test api", user='UPGH1C1PF')
-    # time.sleep(5)
-    # update_msg(web_client, "CP3P9CS2W", "updated!", ts)
-    # update_msg(web_client, "CP3P9CS2W", "update again!", ts)
-    # send_private_msg_in_channel(web_client, "CP3P9CS2W", 'UPGH1C1PF', "test api")
 
     rtm_client = slack.RTMClient(token=slack_token, ssl=ssl_context)
     rtm_client.start()

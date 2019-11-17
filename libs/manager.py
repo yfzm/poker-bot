@@ -38,9 +38,6 @@ class GameManager:
         table = self.tables[table_id]
         return table.join(user_id)
 
-    # def set_ob(self, func) -> None:
-    #     self.game.setOb(func)
-
     def start(self, table_id, user_id):
         """Start a game, return (hands, err)"""
         table = self.tables[table_id]
@@ -75,10 +72,6 @@ class GameManager:
         table = self.tables[table_id]
         return table.all_in(user_id)
 
-    # def start_timer(self, table_id) -> None:
-    #     table = self.tables[table_id]
-    #     table.timer_function()
-
     def get_game_info(self, table_id) -> str:
         table = self.tables[table_id]
         return table.get_game_info()
@@ -88,11 +81,3 @@ gameManager = GameManager()
 
 if __name__ == "__main__":
     pass
-    # some fields of `user`
-    # 'color'
-    # 'deleted'
-    # 'id'
-    # 'is_admin'
-    # 'is_app_user'
-    # 'is_bot'
-    # 'name'

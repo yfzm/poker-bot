@@ -67,13 +67,11 @@ class Game(object):
         self.pub_cards = []
         self.highest_bet = 0
         self.result = Result()
-        # self.permitCheck = False
 
     def init_game(self, players: List[Player], ante: int, btn: int):
         self.players = players
         for player in self.players:
             player.init()
-        # self.game_status = GameStatus.WAITFORPLAYERREADY
         self.roundStatus = RoundStatus.PREFLOP
         self.nplayers = len(self.players)
         self.deck = Deck()
@@ -98,10 +96,7 @@ class Game(object):
     @status([GameStatus.WAITING])
     def start(self, players: List[Player], ante: int, btn: int):
         self.init_game(players, ante, btn)
-        # for i in range(0, self.max_player):
-        #     if (self.players[i].active != self.players[i].ready):
-        #         return -1
-        # all the players are ready
+
         self.game_status = GameStatus.RUNNING
 
         # deal all players
@@ -110,7 +105,6 @@ class Game(object):
             player.cards[1] = self.deck.getCard()
 
         # blind
-        # self.btn = self.findNextActivePlayer(self.btn)
         self.sb = self.findNextActivePlayer(self.btn)
         self.bb = self.findNextActivePlayer(self.sb)
         self.utg = self.findNextActivePlayer(self.bb)
@@ -122,21 +116,17 @@ class Game(object):
         self.putChip(self.sb, self.ante // 2, 'SB')
         self.putChip(self.bb, self.ante, 'BB')
         self.highest_bet = self.ante
-        # self.permitCheck = False
 
         return 0
 
     def findNextActivePlayer(self, pos):
-        pos = (pos + 1) % self.nplayers
-        count = 0
-        while(self.players[pos].active == False or not self.players[pos].is_playing()):
-            pos = (pos + 1) % self.nplayers
-            count += 1
-
-            # nobody can do action
-            if (count > self.nplayers):
+        new_pos = (pos + 1) % self.nplayers
+        while not(self.players[pos].active and self.players[pos].is_playing()):
+            if new_pos == pos:
                 return -1
-        return pos
+            new_pos = (new_pos + 1) % self.nplayers
+
+        return new_pos if new_pos != pos else -1
 
     def invokeNextPlayer(self):
         r = self.findNextActivePlayer(self.exe_pos)
@@ -157,15 +147,12 @@ class Game(object):
                 self.end()
                 return
             self.roundStatus = RoundStatus(self.roundStatus.value + 1)
-            # self.lastBet = 0
-            # self.permitCheck = True
             # sb first
             self.exe_pos = self.sb
             self.nextRound = self.sb
 
     def gend(self):
         # continue round until end
-        # self.permitCheck = True
         if self.roundStatus.value < RoundStatus.FLOP.value:
             self.flop()
         if self.roundStatus.value < RoundStatus.TURN.value:
@@ -267,21 +254,20 @@ class Game(object):
 
     @status([GameStatus.RUNNING])
     def pfold(self, pos):
-        if (pos != self.exe_pos):
+        if pos != self.exe_pos:
             return -1
         self.players[pos].set_fold()
 
         # end of a game
         if self.get_active_player_num() == 1:
             self.end()
-            # self.roundStatus = RoundStatus.END
         else:
             self.invokeNextPlayer()
         return 0
 
     @status([GameStatus.RUNNING])
     def pcheck(self, pos):
-        if (pos != self.exe_pos or not self.is_check_permitted(pos)):
+        if pos != self.exe_pos or not self.is_check_permitted(pos):
             return -1
         self.invokeNextPlayer()
         return 0
@@ -289,11 +275,10 @@ class Game(object):
     @status([GameStatus.RUNNING])
     def praise(self, pos, num):
         # TODO: check valid raise: the diff is bigger than the last diff
-        if (pos != self.exe_pos):
+        if pos != self.exe_pos:
             return -1
 
         self.nextRound = self.exe_pos
-        # self.permitCheck = False
         self.putChip(pos, num, 'RAISE')
         self.highest_bet = self.players[pos].chipBet
         self.invokeNextPlayer()
@@ -301,39 +286,19 @@ class Game(object):
 
     @status([GameStatus.RUNNING])
     def pallin(self, pos):
-        if (pos != self.exe_pos):
+        if pos != self.exe_pos:
             return -1
 
         # does allin raise the chip?
         if self.players[pos].chip > self.highest_bet:
             self.highest_bet = self.players[pos].chip
             self.nextRound = self.exe_pos
-            # self.permitCheck = False  # TODO: necessary?
         self.putChip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
         self.invokeNextPlayer()
         return 0
 
     def getJSON(self):
         return 'temp'
-
-
-# class Player(object):
-#     def __init__(self, pos):
-#         self.chip = 0
-#         self.chipBet = 0
-#         self.cards = [0] * 2
-#         self.active = False  # join a game
-#         self.ready = False
-#         self.fold = False
-#         self.allin = False
-#         self.pos = pos
-
-#     def setRank(self, pubCards):
-#         def cardToStr(card):
-#             return str(card)
-#         maxRank = poker7(map(cardToStr, self.cards + pubCards))
-#         self.rank = maxRank['rank']
-#         self.hand = maxRank['hand']
 
 
 class Deck(object):
