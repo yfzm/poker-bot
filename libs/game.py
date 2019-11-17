@@ -184,23 +184,25 @@ class Game(object):
     def river(self):
         self.pub_cards.append(self.deck.getCard())
 
-    def win_pot(self, winner: Player, exclude_players: List[Player]):
+    def win_pot(self, winners: List[Player], exclude_players: List[Player]):
         """Calculate how many chips the `winner` wins and set result for all players
 
         Args:
-            winner (Player): the winner
+            winners (List[Player]): the winners, if more than one player, they split the pot.
+                Note that the winners are sorted in **descending** order of their bet, which
+                is crucial beacause we always want to deal with the main pot first
             exclude_players (List[Player]): players in this list will not lose chips
                 to `winner`, because they have a bigger hand
         """
-        total_win = 0
+        n_winners = len(winners)
         for player in self.players:
-            if player == winner or player in exclude_players:
+            if player in winners or player in exclude_players:
                 continue
-            could_win = min(player.chipBet, winner.chipBet)
-            total_win += could_win
-            self.result.lose_bet(player, could_win)
-            player.chipBet -= could_win
-        self.result.win_bet(winner, total_win)
+            for winner in winners:
+                could_win = min(player.chipBet, winner.chipBet)
+                self.result.win_bet(winner, could_win // n_winners)
+                self.result.lose_bet(player, could_win // n_winners)
+                player.chipBet -= could_win
 
     def end(self):
         # Initialize self.result
@@ -214,15 +216,23 @@ class Game(object):
         # Only when there are more than two active players, comparision is needed
         if len(active_players) >= 2:
             for p in active_players:
-                rank, hand = poker7(list(map(lambda card: str(card), p.cards + self.pub_cards)))
-                print(f"{rank}, {hand}")
+                hand, rank = poker7(list(map(lambda card: str(card), p.cards + self.pub_cards)))
                 p.set_rank_and_hand(rank, hand)
+            active_players.sort(key=lambda p: p.chipBet, reverse=False)
             active_players.sort(key=lambda p: p.rank, reverse=True)
 
+        winner_players = []
         exclude_players = []
+        last_rank = active_players[0].rank
         for p in active_players:
-            self.win_pot(p, exclude_players)
-            exclude_players.append(p)
+            if p.rank == last_rank:
+                winner_players.append(p)
+            else:
+                self.win_pot(winner_players, exclude_players)
+                exclude_players += winner_players.copy()
+                winner_players = [p]
+                last_rank = p.rank
+        self.win_pot(winner_players, exclude_players)
 
         self.roundStatus = RoundStatus.END
         self.game_status = GameStatus.WAITING
