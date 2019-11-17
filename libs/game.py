@@ -202,7 +202,7 @@ class Game(object):
                 could_win = min(player.chipBet, winner.chipBet)
                 self.result.win_bet(winner, could_win // n_winners)
                 self.result.lose_bet(player, could_win // n_winners)
-            player.chipBet -= could_win
+                player.chipBet -= could_win
 
     def end(self):
         # Initialize self.result
