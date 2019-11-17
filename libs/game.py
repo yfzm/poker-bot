@@ -106,10 +106,8 @@ class Game(object):
 
         # deal all players
         for player in self.players:
-            # player.cards[0] = self.deck.getCard()
-            # player.cards[1] = self.deck.getCard()
-            player.cards[0] = Card(0, 1)
-            player.cards[1] = Card(1, 2)
+            player.cards[0] = self.deck.getCard()
+            player.cards[1] = self.deck.getCard()
 
         # blind
         # self.btn = self.findNextActivePlayer(self.btn)
@@ -218,11 +216,10 @@ class Game(object):
         # Only when there are more than two active players, comparision is needed
         if len(active_players) >= 2:
             for p in active_players:
-                rank, hand = poker7(list(map(lambda card: str(card), p.cards + self.pub_cards)))
-                print(f"{rank}, {hand}")
+                hand, rank = poker7(list(map(lambda card: str(card), p.cards + self.pub_cards)))
                 p.set_rank_and_hand(rank, hand)
-            active_players.sort(key=lambda p: p.rank, reverse=True)
             active_players.sort(key=lambda p: p.chipBet, reverse=False)
+            active_players.sort(key=lambda p: p.rank, reverse=True)
 
         winner_players = []
         exclude_players = []
