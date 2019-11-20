@@ -135,7 +135,7 @@ class Game(object):
 
     def findNextActivePlayer(self, pos):
         new_pos = (pos + 1) % self.nplayers
-        while not(self.players[pos].active and self.players[pos].is_playing()):
+        while not(self.players[new_pos].active and self.players[new_pos].is_playing()):
             if new_pos == pos:
                 return -1
             new_pos = (new_pos + 1) % self.nplayers
@@ -154,7 +154,7 @@ class Game(object):
             self.end()
             return
         
-        if self.exe_pos == self.nextRound:
+        if r == self.nextRound:
             # enter next phase
             self.roundStatus = RoundStatus(self.roundStatus.value + 1)
             self.last_round_bet = self.highest_bet
@@ -233,7 +233,7 @@ class Game(object):
                 last_rank = p.rank
         self.win_pot(winner_players, exclude_players)
 
-        # self.roundStatus = RoundStatus.END
+        self.roundStatus = RoundStatus.END
         self.game_status = GameStatus.WAITING
 
     def get_active_player_num(self):

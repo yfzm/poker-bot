@@ -63,7 +63,7 @@ def build_payload(pub_cards: List[str], pot: int, ante: int, btn_userid: str, in
     if len(pub_cards) > 0:
         card_str = ""
         for card in pub_cards:
-            card_str += card_to_emoji(card) + "  "
+            card_str += card_to_emoji(str(card)) + "  "
         ret.append({
             "type": "section",
 		    "text": {
