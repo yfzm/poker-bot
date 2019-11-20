@@ -121,15 +121,15 @@ class Table:
         if self.round_status_local != round_status:
             # the game has changed to the next status, while local status is behind
             # so, we should print some message
-            public_cards = self.game.pub_cards
-            bgame.send_to_channel_by_table_id(
-                self.uid, "Enter {} stage: public cards is {}".format(round_status, public_cards))
+            # public_cards = self.game.pub_cards
+            # bgame.send_to_channel_by_table_id(
+                # self.uid, "Enter {} stage: public cards is {}".format(round_status, public_cards))
             self.round_status_local = round_status
             self.countdown = MAX_AWAIT
-            self.msg_ts, err = bgame.send_to_channel_by_table_id(
-                self.uid, f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
-            if err is not None:
-                raise RuntimeError  # TODO: fix later
+            if exe_pos == self.exe_pos_local:
+                self.msg_ts, err = bgame.send_to_channel_by_table_id(self.uid, blocks=get_payload())
+                if err is not None:
+                    raise RuntimeError  # TODO: fix later
 
         elif exe_pos != self.exe_pos_local:
             # the game stage is not changed, but the current active player is changed
