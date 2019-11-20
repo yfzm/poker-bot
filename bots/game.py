@@ -106,15 +106,15 @@ def start_game(web_client: slack.WebClient, channel: str, user: str):
         send_msg(web_client, channel, err)
         return
     for hand in hands:
+        card_str = ""
+        for card in hand['hand']:
+            card_str += card_to_emoji(str(card)) + "  "
         if not hand['id'].startswith("bot"):
-            card_str = ""
-            for card in hand['hand']:
-                card_str += card_to_emoji(str(card)) + "  "
             send_private_msg_in_channel(
                 # web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
                 web_client, channel, hand["id"], f"Your hand is {card_str}")
         else:
-            send_msg(web_client, channel, f"{hand['id']} has {hand['hand']}")
+            send_msg(web_client, channel, f"{hand['id']} has {card_str}")
     send_msg(web_client, channel,
              "Game started! I have send your hand to you personnaly.")
 
@@ -131,11 +131,14 @@ def continue_game(web_client: slack.WebClient, channel: str, user: str):
         send_msg(web_client, channel, err)
         return
     for hand in hands:
+        card_str = ""
+        for card in hand['hand']:
+            card_str += card_to_emoji(str(card)) + "  "
         if not hand['id'].startswith("bot"):
             send_private_msg_in_channel(
-                web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
+                web_client, channel, hand["id"], f"Your hand is {card_str}")
         else:
-            send_msg(web_client, channel, f"{hand['id']} has {hand['hand']}")
+            send_msg(web_client, channel, f"{hand['id']} has {card_str}")
     send_msg(web_client, channel,
              "Game started! I have send your hand to you personnaly.")
 
