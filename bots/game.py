@@ -6,6 +6,7 @@ from libs.manager import gameManager
 from .message_helper import *
 import threading
 from slackapi.client import *
+from slackapi.payload import *
 from typing import Dict
 
 
@@ -106,8 +107,12 @@ def start_game(web_client: slack.WebClient, channel: str, user: str):
         return
     for hand in hands:
         if not hand['id'].startswith("bot"):
+            card_str = ""
+            for card in hand['hand']:
+                card_str += card_to_emoji(str(card)) + "  "
             send_private_msg_in_channel(
-                web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
+                # web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
+                web_client, channel, hand["id"], f"Your hand is {card_str}")
         else:
             send_msg(web_client, channel, f"{hand['id']} has {hand['hand']}")
     send_msg(web_client, channel,

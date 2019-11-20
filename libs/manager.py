@@ -6,7 +6,7 @@ from typing import Dict
 import time
 import bots.game as bgame
 from typing import Dict
-from slackapi.client import get_mentioned_string
+from slackapi.payload import get_mentioned_string
 from .table import Table
 
 MAX_PLAYER = 9

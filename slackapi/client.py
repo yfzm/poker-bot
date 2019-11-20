@@ -45,7 +45,7 @@ def update_msg(web_client: slack.WebClient, channel: str, msg: str, ts: str, use
     else:
         web_client.chat_update(channel=channel, ts=ts, blocks=blocks)
 
-def send_private_msg_in_channel(web_client: slack.WebClient, channel: str, user: str, msg: str):
+def send_private_msg_in_channel(web_client: slack.WebClient, channel: str, user: str, msg: str, blocks=None):
     """Sends an ephemeral message to a user in a channel.
 
     Args:
@@ -54,8 +54,12 @@ def send_private_msg_in_channel(web_client: slack.WebClient, channel: str, user:
         user (str): The id of user who should see the message. e.g. 'U0BPQUNTA'
         msg (str): The message you'd like to share. e.g. 'Hello world'
             text is not required when presenting blocks.
+        blocks (List[Object]) optional: If provided, `msg` will be emitted
     """
-    web_client.chat_postEphemeral(channel=channel, user=user, text=msg)
+    if blocks is None:
+        web_client.chat_postEphemeral(channel=channel, user=user, text=msg)
+    else:
+        web_client.chat_postEphemeral(channel=channel, user=user, blocks=blocks)
 
 
 # example payload:
