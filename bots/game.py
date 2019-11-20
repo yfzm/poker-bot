@@ -195,17 +195,17 @@ def echo_info(web_client: slack.WebClient, channel: str):
     send_msg(web_client, channel, gameManager.get_game_info(table_id))
 
 
-def send_to_channel_by_table_id(table_id, msg):
+def send_to_channel_by_table_id(table_id, msg="void", blocks=None):
     for (channel, info) in channels.items():
         if info.table_id == table_id:
-            ts = send_msg(info.client, channel, msg)
+            ts = send_msg(info.client, channel, msg, blocks=blocks)
             return ts, None
     return None, "table_id not found"
 
 
-def update_msg_by_table_id(table_id, ts, msg):
+def update_msg_by_table_id(table_id, ts, msg="void", blocks=None):
     for (channel, info) in channels.items():
         if info.table_id == table_id:
-            update_msg(info.client, channel, msg, ts)
+            update_msg(info.client, channel, msg, ts, blocks=blocks)
             return None
     return "table_id not found"

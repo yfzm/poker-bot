@@ -50,6 +50,15 @@ class Result:
             player.chip += chip
 
 
+class Action:
+    def __init__(self, action: str, chip: int, active = True):
+        self.action = action
+        self.chip = chip
+        self.active = active
+    
+    def set_disabled(self):
+        self.active = False
+
 class Game(object):
     def __init__(self):
         self.players: List[Player] = []
@@ -66,12 +75,16 @@ class Game(object):
         self.total_pot = 0
         self.pub_cards = []
         self.highest_bet = 0
+        self.last_round_bet = 0
         self.result = Result()
+        self.actions: Dict[str, Action] = dict()
 
     def init_game(self, players: List[Player], ante: int, btn: int):
         self.players = players
+        self.actions.clear()
         for player in self.players:
             player.init()
+            self.actions[player.user] = Action("", 0, False)
         self.roundStatus = RoundStatus.PREFLOP
         self.nplayers = len(self.players)
         self.deck = Deck()
@@ -80,6 +93,7 @@ class Game(object):
         self.exe_pos = -1
         self.pub_cards = []
         self.highest_bet = 0
+        self.last_round_bet = 0
         self.result = Result()
         self.total_pot = 0
 
@@ -129,38 +143,36 @@ class Game(object):
         return new_pos if new_pos != pos else -1
 
     def invokeNextPlayer(self):
+        if self.get_active_player_num() == 1:
+            self.end()
+            return
+        
         r = self.findNextActivePlayer(self.exe_pos)
         if r == -1:
-            self.gend()
-        else:
-            self.exe_pos = r
-
-        # touch the bound
-        if self.roundStatus != RoundStatus.END and self.exe_pos == self.nextRound:
-            if self.roundStatus == RoundStatus.PREFLOP:
-                self.flop()
-            elif self.roundStatus == RoundStatus.FLOP:
-                self.turn()
-            elif self.roundStatus == RoundStatus.TURN:
-                self.river()
-            elif self.roundStatus == RoundStatus.RIVER:
-                self.end()
-                return
+            # all-in case
+            self.pub_cards += [self.deck.getCard() for i in range(len(self.pub_cards), 5)]
+            self.end()
+            return
+        
+        if self.exe_pos == self.nextRound:
+            # enter next phase
             self.roundStatus = RoundStatus(self.roundStatus.value + 1)
-            # sb first
+            self.last_round_bet = self.highest_bet
+            if self.roundStatus == RoundStatus.FLOP:
+                self.flop()
+            elif self.roundStatus == RoundStatus.TURN:
+                self.turn()
+            elif self.roundStatus == RoundStatus.RIVER:
+                self.river()
+            elif self.roundStatus == RoundStatus.END:
+                self.end()
+            for player in self.players:
+                self.actions[player.user].set_disabled()
             self.exe_pos = self.sb
             self.nextRound = self.sb
-
-    def gend(self):
-        # continue round until end
-        if self.roundStatus.value < RoundStatus.FLOP.value:
-            self.flop()
-        if self.roundStatus.value < RoundStatus.TURN.value:
-            self.turn()
-        if self.roundStatus.value < RoundStatus.RIVER.value:
-            self.river()
-        if self.roundStatus.value < RoundStatus.END.value:
-            self.end()
+            return
+        
+        self.exe_pos = r
 
     def flop(self):
         self.pub_cards = [self.deck.getCard() for i in range(3)]
@@ -221,7 +233,7 @@ class Game(object):
                 last_rank = p.rank
         self.win_pot(winner_players, exclude_players)
 
-        self.roundStatus = RoundStatus.END
+        # self.roundStatus = RoundStatus.END
         self.game_status = GameStatus.WAITING
 
     def get_active_player_num(self):
@@ -249,6 +261,7 @@ class Game(object):
     def pcall(self, pos):
         if pos != self.exe_pos or self.putChip(pos, self.highest_bet - self.players[pos].chipBet, 'CALL') < 0:
             return -1
+        self.actions[self.players[pos].user] = Action("call", self.players[pos].chipBet - self.last_round_bet)
         self.invokeNextPlayer()
         return 0
 
@@ -257,18 +270,15 @@ class Game(object):
         if pos != self.exe_pos:
             return -1
         self.players[pos].set_fold()
-
-        # end of a game
-        if self.get_active_player_num() == 1:
-            self.end()
-        else:
-            self.invokeNextPlayer()
+        self.actions[self.players[pos].user] = Action("fold", 0)
+        self.invokeNextPlayer()
         return 0
 
     @status([GameStatus.RUNNING])
     def pcheck(self, pos):
         if pos != self.exe_pos or not self.is_check_permitted(pos):
             return -1
+        self.actions[self.players[pos].user] = Action("check", 0)
         self.invokeNextPlayer()
         return 0
 
@@ -280,6 +290,7 @@ class Game(object):
 
         self.nextRound = self.exe_pos
         self.putChip(pos, num, 'RAISE')
+        self.actions[self.players[pos].user] = Action("raise", self.players[pos].chipBet - self.last_round_bet)
         self.highest_bet = self.players[pos].chipBet
         self.invokeNextPlayer()
         return 0
@@ -294,6 +305,7 @@ class Game(object):
             self.highest_bet = self.players[pos].chip
             self.nextRound = self.exe_pos
         self.putChip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
+        self.actions[self.players[pos].user] = Action("all-in", self.players[pos].chipBet - self.last_round_bet)
         self.invokeNextPlayer()
         return 0
 

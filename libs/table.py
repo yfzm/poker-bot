@@ -8,7 +8,7 @@ from typing import List, Dict
 
 import libs.game as lgame
 import bots.game as bgame
-from slackapi.client import get_mentioned_string
+from slackapi.payload import get_mentioned_string, build_payload, build_info_str
 from .poker_bot import PokerBot
 from .player import Player, PlayerStatus
 
@@ -95,6 +95,21 @@ class Table:
         round_status = self.game.get_round_status_name()
         exe_pos = self.game.exe_pos
 
+        def get_payload():
+            info_list = []
+            pos = self.game.sb
+            while True:
+                player = self.players[pos]
+                if player.active and not player.is_fold():
+                    action = self.game.actions[player.user]
+                    m_action = action.action if action.active else ""
+                    m_chip = action.chip if action.active else 0
+                    info_list.append(build_info_str(player.user, player.get_remaining_chip(), m_action, m_chip, pos == exe_pos, self.countdown))
+                if pos == self.game.btn:
+                    break
+                pos = (pos + 1) % self.game.nplayers
+            return build_payload(self.game.pub_cards, self.game.total_pot, self.game.ante, self.players[self.game.btn].user, info_list)
+
         if self.countdown == 0:
             # TODO: prefer check over flod
             self.game.pfold(exe_pos)
@@ -120,15 +135,13 @@ class Table:
             # the game stage is not changed, but the current active player is changed
             # we also should print some message
             self.countdown = MAX_AWAIT
-            self.msg_ts, err = bgame.send_to_channel_by_table_id(
-                self.uid, f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
+            self.msg_ts, err = bgame.send_to_channel_by_table_id(self.uid, blocks=get_payload())
 
         else:
             # neither the game stage nor current active player are changed
             # so, we should update the message and decrease the countdown
             self.countdown -= 1
-            bgame.update_msg_by_table_id(self.uid, self.msg_ts,
-                                         f"[{round_status}] wait for {get_mentioned_string(self.players[exe_pos].user)} to act (remaining {self.countdown}s)")
+            bgame.update_msg_by_table_id(self.uid, self.msg_ts, blocks=get_payload())
 
         if round_status == "END":
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
