@@ -17,7 +17,7 @@ class Player:
         self.init()
 
     def init(self):
-        self.chipBet = 0
+        self.chip_bet = 0
         self.cards = [0] * 2
         self.active = True
         self.status = PlayerStatus.PLAYING
@@ -25,7 +25,7 @@ class Player:
         self.hand = None
 
     def get_remaining_chip(self) -> int:
-        return self.chip - self.chipBet
+        return self.chip - self.chip_bet
 
     def is_playing(self) -> bool:
         return self.status == PlayerStatus.PLAYING

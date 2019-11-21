@@ -200,10 +200,10 @@ class Game(object):
             if player in winners or player in exclude_players:
                 continue
             for winner in winners:
-                could_win = min(player.chipBet, winner.chipBet)
+                could_win = min(player.chip_bet, winner.chip_bet)
                 self.result.win_bet(winner, could_win // n_winners)
                 self.result.lose_bet(player, could_win // n_winners)
-                player.chipBet -= could_win
+                player.chip_bet -= could_win
 
     def end(self):
         # Initialize self.result
@@ -221,7 +221,7 @@ class Game(object):
                 hand, rank = poker7(
                     list(map(lambda card: str(card), p.cards + self.pub_cards)))
                 p.set_rank_and_hand(rank, hand)
-            active_players.sort(key=lambda p: p.chipBet, reverse=False)
+            active_players.sort(key=lambda p: p.chip_bet, reverse=False)
             active_players.sort(key=lambda p: p.rank, reverse=True)
 
         winner_players = []
@@ -254,19 +254,19 @@ class Game(object):
             return -1
         if remaining_chip == num:
             player.set_allin()
-        player.chipBet += num
+        player.chip_bet += num
         self.total_pot += num
         return 0
 
     def is_check_permitted(self, pos):
-        return self.players[pos].chipBet >= self.highest_bet
+        return self.players[pos].chip_bet >= self.highest_bet
 
     @status([GameStatus.RUNNING])
     def pcall(self, pos):
-        if pos != self.exe_pos or self.put_chip(pos, self.highest_bet - self.players[pos].chipBet, 'CALL') < 0:
+        if pos != self.exe_pos or self.put_chip(pos, self.highest_bet - self.players[pos].chip_bet, 'CALL') < 0:
             return -1
         self.actions[self.players[pos].user] = Action(
-            "call", self.players[pos].chipBet - self.last_round_bet)
+            "call", self.players[pos].chip_bet - self.last_round_bet)
         self.invoke_next_player()
         return 0
 
@@ -296,8 +296,8 @@ class Game(object):
         self.next_round = self.exe_pos
         self.put_chip(pos, num, 'RAISE')
         self.actions[self.players[pos].user] = Action(
-            "raise", self.players[pos].chipBet - self.last_round_bet)
-        self.highest_bet = self.players[pos].chipBet
+            "raise", self.players[pos].chip_bet - self.last_round_bet)
+        self.highest_bet = self.players[pos].chip_bet
         self.invoke_next_player()
         return 0
 
@@ -312,7 +312,7 @@ class Game(object):
             self.next_round = self.exe_pos
         self.put_chip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
         self.actions[self.players[pos].user] = Action(
-            "all-in", self.players[pos].chipBet - self.last_round_bet)
+            "all-in", self.players[pos].chip_bet - self.last_round_bet)
         self.invoke_next_player()
         return 0
 
