@@ -23,7 +23,7 @@ class TestGameKernel(unittest.TestCase):
         self.assertEqual(game.pcheck(0), 0)
         self.assertEqual(game.exe_pos, 2)
         self.assertEqual(game.pfold(2), 0)
-        self.assertEqual(game.roundStatus, RoundStatus.END)
+        self.assertEqual(game.round_status, RoundStatus.END)
         self.assertEqual(game.game_status, GameStatus.WAITING)
 
     def test_all_in(self):
