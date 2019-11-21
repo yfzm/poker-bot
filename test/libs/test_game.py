@@ -1,12 +1,10 @@
 import unittest
 from libs.game import Game, GameStatus, RoundStatus
 from libs.player import Player
-import sys
-import os
-import time
+
 
 class TestGameKernel(unittest.TestCase):
-    
+
     def setUp(self):
         self.g = Game()
         self.p1 = Player("u1")
@@ -20,7 +18,7 @@ class TestGameKernel(unittest.TestCase):
         self.assertEqual(game.pfold(1), 0)
         self.assertEqual(game.get_active_player_num(), 2)
         self.assertEqual(game.exe_pos, 2)
-        
+
         self.assertEqual(game.pcall(2), 0)
         self.assertEqual(game.pcheck(0), 0)
         self.assertEqual(game.exe_pos, 2)

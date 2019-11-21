@@ -4,7 +4,7 @@ from .card import Card
 from .pokerCmp import poker7
 import random
 from typing import List, Dict
-from .player import Player, PlayerStatus
+from .player import Player
 
 
 class GameStatus(IntEnum):
@@ -44,20 +44,21 @@ class Result:
 
     def lose_bet(self, player: Player, chip: int):
         self.chip_changes[player] -= chip
-    
+
     def execute(self):
         for player, chip in self.chip_changes.items():
             player.chip += chip
 
 
 class Action:
-    def __init__(self, action: str, chip: int, active = True):
+    def __init__(self, action: str, chip: int, active=True):
         self.action = action
         self.chip = chip
         self.active = active
-    
+
     def set_disabled(self):
         self.active = False
+
 
 class Game(object):
     def __init__(self):
@@ -146,14 +147,15 @@ class Game(object):
         if self.get_active_player_num() == 1:
             self.end()
             return
-        
+
         r = self.findNextActivePlayer(self.exe_pos)
         if r == -1:
             # all-in case
-            self.pub_cards += [self.deck.getCard() for i in range(len(self.pub_cards), 5)]
+            self.pub_cards += [self.deck.getCard()
+                               for i in range(len(self.pub_cards), 5)]
             self.end()
             return
-        
+
         if r == self.nextRound:
             # enter next phase
             self.roundStatus = RoundStatus(self.roundStatus.value + 1)
@@ -171,7 +173,7 @@ class Game(object):
             self.exe_pos = self.sb
             self.nextRound = self.sb
             return
-        
+
         self.exe_pos = r
 
     def flop(self):
@@ -207,15 +209,17 @@ class Game(object):
         # Initialize self.result
         for player in self.players:
             self.result.add_result(player, 0)
-        
-        active_players: List[Player] = list(filter(lambda p: p.active and not p.is_fold(), self.players))
+
+        active_players: List[Player] = list(
+            filter(lambda p: p.active and not p.is_fold(), self.players))
         if len(active_players) == 0:
             raise RuntimeError("No active player?")
 
         # Only when there are more than two active players, comparision is needed
         if len(active_players) >= 2:
             for p in active_players:
-                hand, rank = poker7(list(map(lambda card: str(card), p.cards + self.pub_cards)))
+                hand, rank = poker7(
+                    list(map(lambda card: str(card), p.cards + self.pub_cards)))
                 p.set_rank_and_hand(rank, hand)
             active_players.sort(key=lambda p: p.chipBet, reverse=False)
             active_players.sort(key=lambda p: p.rank, reverse=True)
@@ -261,7 +265,8 @@ class Game(object):
     def pcall(self, pos):
         if pos != self.exe_pos or self.putChip(pos, self.highest_bet - self.players[pos].chipBet, 'CALL') < 0:
             return -1
-        self.actions[self.players[pos].user] = Action("call", self.players[pos].chipBet - self.last_round_bet)
+        self.actions[self.players[pos].user] = Action(
+            "call", self.players[pos].chipBet - self.last_round_bet)
         self.invokeNextPlayer()
         return 0
 
@@ -290,7 +295,8 @@ class Game(object):
 
         self.nextRound = self.exe_pos
         self.putChip(pos, num, 'RAISE')
-        self.actions[self.players[pos].user] = Action("raise", self.players[pos].chipBet - self.last_round_bet)
+        self.actions[self.players[pos].user] = Action(
+            "raise", self.players[pos].chipBet - self.last_round_bet)
         self.highest_bet = self.players[pos].chipBet
         self.invokeNextPlayer()
         return 0
@@ -305,7 +311,8 @@ class Game(object):
             self.highest_bet = self.players[pos].chip
             self.nextRound = self.exe_pos
         self.putChip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
-        self.actions[self.players[pos].user] = Action("all-in", self.players[pos].chipBet - self.last_round_bet)
+        self.actions[self.players[pos].user] = Action(
+            "all-in", self.players[pos].chipBet - self.last_round_bet)
         self.invokeNextPlayer()
         return 0
 
