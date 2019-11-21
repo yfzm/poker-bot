@@ -15,7 +15,7 @@ class Player:
         self.user = user
         self.chip = INITIAL_CHIPS
         self.init()
-    
+
     def init(self):
         self.chipBet = 0
         self.cards = [0] * 2
@@ -23,7 +23,7 @@ class Player:
         self.status = PlayerStatus.PLAYING
         self.rank = None
         self.hand = None
-    
+
     def get_remaining_chip(self) -> int:
         return self.chip - self.chipBet
 

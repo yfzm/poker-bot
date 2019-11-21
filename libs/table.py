@@ -1,5 +1,3 @@
-from enum import Enum
-from typing import Callable
 import time
 import threading as thread
 import uuid
@@ -10,7 +8,7 @@ import libs.game as lgame
 import bots.game as bgame
 from slackapi.payload import get_mentioned_string, build_payload, build_info_str
 from .poker_bot import PokerBot
-from .player import Player, PlayerStatus
+from .player import Player
 
 MAX_AWAIT = 600
 INITIAL_CHIPS = 500
@@ -55,7 +53,7 @@ class Table:
         for pos, player in enumerate(self.players):
             hands.append({
                 "id": player.user,
-                "hand": self.game.getCardsByPos(pos)
+                "hand": self.game.get_cards_by_pos(pos)
             })
         self.timer_thread.start()
         return hands, None
@@ -104,11 +102,14 @@ class Table:
                     action = self.game.actions[player.user]
                     m_action = action.action if action.active else ""
                     m_chip = action.chip if action.active else 0
-                    info_list.append(build_info_str(player.user, player.get_remaining_chip(), m_action, m_chip, pos == exe_pos, self.countdown))
+                    info_list.append(build_info_str(player.user,
+                                                    player.get_remaining_chip(),
+                                                    m_action, m_chip, pos == exe_pos, self.countdown))
                 if pos == self.game.btn:
                     break
                 pos = (pos + 1) % self.game.nplayers
-            return build_payload(self.game.pub_cards, self.game.total_pot, self.game.ante, self.players[self.game.btn].user, info_list)
+            return build_payload(self.game.pub_cards, self.game.total_pot, self.game.ante,
+                                 self.players[self.game.btn].user, info_list)
 
         if self.countdown == 0:
             # TODO: prefer check over flod
@@ -121,27 +122,27 @@ class Table:
         if self.round_status_local != round_status:
             # the game has changed to the next status, while local status is behind
             # so, we should print some message
-            # public_cards = self.game.pub_cards
-            # bgame.send_to_channel_by_table_id(
-                # self.uid, "Enter {} stage: public cards is {}".format(round_status, public_cards))
             self.round_status_local = round_status
             self.countdown = MAX_AWAIT
-            if exe_pos == self.exe_pos_local:
-                self.msg_ts, err = bgame.send_to_channel_by_table_id(self.uid, blocks=get_payload())
-                if err is not None:
-                    raise RuntimeError  # TODO: fix later
+            # if exe_pos == self.exe_pos_local:
+            self.msg_ts, err = bgame.send_to_channel_by_table_id(
+                self.uid, blocks=get_payload())
+            if err is not None:
+                raise RuntimeError  # TODO: fix later
 
         elif exe_pos != self.exe_pos_local:
             # the game stage is not changed, but the current active player is changed
             # we also should print some message
             self.countdown = MAX_AWAIT
-            self.msg_ts, err = bgame.send_to_channel_by_table_id(self.uid, blocks=get_payload())
+            self.msg_ts, err = bgame.send_to_channel_by_table_id(
+                self.uid, blocks=get_payload())
 
         else:
             # neither the game stage nor current active player are changed
             # so, we should update the message and decrease the countdown
             self.countdown -= 1
-            bgame.update_msg_by_table_id(self.uid, self.msg_ts, blocks=get_payload())
+            bgame.update_msg_by_table_id(
+                self.uid, self.msg_ts, blocks=get_payload())
 
         if round_status == "END":
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
@@ -190,10 +191,11 @@ class Table:
         info_str += f"bb: {self.game.bb} {get_mentioned_string(self.players[self.game.bb].user)}\n"
         info_str += f"utg: {self.game.utg} {get_mentioned_string(self.players[self.game.utg].user)}\n"
         info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].user)}\n"
-        info_str += f"next_round: {self.game.nextRound} {get_mentioned_string(self.players[self.game.nextRound].user)}\n"
+        info_str += f"next_round: {self.game.next_round} {get_mentioned_string(self.players[self.game.next_round].user)}\n"
         info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}\n"
         for pos, player in enumerate(self.players):
-            info_str += f"{get_mentioned_string(player.user)}: chip {player.chip}, total_bet {player.chipBet}, cards {player.cards}, "
+            info_str += f"{get_mentioned_string(player.user)}: chip {player.chip}, \
+                        total_bet {player.chipBet}, cards {player.cards}, "
             info_str += f"can_check {self.game.is_check_permitted(pos)}, active {player.active}, status {player.status.name}, "
             info_str += f"rank {player.rank}, hand {player.hand}\n"
         return info_str

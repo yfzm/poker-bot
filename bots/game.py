@@ -1,12 +1,8 @@
 import slack
-from slackbot.bot import respond_to
-from slackbot.bot import listen_to
 import re
 from libs.manager import gameManager
-from .message_helper import *
-import threading
-from slackapi.client import *
-from slackapi.payload import *
+from slackapi.client import send_msg, send_private_msg_in_channel, update_msg
+from slackapi.payload import card_to_emoji
 from typing import Dict
 
 
@@ -58,7 +54,7 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
             send_msg(web_client, channel, HELP_MSG, user)
 
 
-channels: Dict[str, ChannelInfo]  = dict()
+channels: Dict[str, ChannelInfo] = dict()
 
 
 def create_table(web_client: slack.WebClient, channel: str, user: str):
@@ -73,6 +69,7 @@ def create_table(web_client: slack.WebClient, channel: str, user: str):
              "Successfully opened a game! Everyone is free to join the table.")
     send_msg(web_client, channel,
              f"is the table owner and just sat at position 0", user)
+
 
 def join_table(web_client: slack.WebClient, channel: str, user: str):
     # TODO: use wrapper to check channel
@@ -142,6 +139,7 @@ def continue_game(web_client: slack.WebClient, channel: str, user: str):
     send_msg(web_client, channel,
              "Game started! I have send your hand to you personnaly.")
 
+
 def add_bot(web_client: slack.WebClient, channel: str):
     if channel not in channels.keys():
         send_msg(web_client, channel,
@@ -152,6 +150,7 @@ def add_bot(web_client: slack.WebClient, channel: str):
     if err is not None:
         send_msg(web_client, channel, err)
         return
+
 
 def bet(web_client: slack.WebClient, channel: str, user: str, chip):
     table_id = channels[channel].table_id

@@ -1,9 +1,12 @@
 from enum import Enum
+
+
 class Color(Enum):
     SPADE = 0
     HEART = 1
     CLUB = 2
     DIAMOD = 3
+
 
 class Card(object):
     def __init__(self, color, num):
@@ -15,7 +18,7 @@ class Card(object):
             self.color = 'c'
         elif color == 3:
             self.color = 'd'
-        
+
         if num == 1:
             self.num = 'A'
         elif num == 10:
@@ -31,7 +34,6 @@ class Card(object):
 
     def __repr__(self):
         return '{}{}'.format(self.num, self.color)
+
     def __str__(self):
         return '{}{}'.format(self.num, self.color)
-
-
