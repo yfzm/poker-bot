@@ -13,7 +13,12 @@ def get_mentioned_string(user: str) -> str:
     return f"<@{user}>"
 
 
-kinds = [":spades:", ":hearts:", ":clubs:", ":diamonds:"]
+kinds = {
+    "s": ":spades:",
+    "h": ":hearts:",
+    "c": ":clubs:",
+    "d": ":diamonds:"
+}
 
 
 def card_to_emoji(card: str) -> str:
@@ -22,7 +27,7 @@ def card_to_emoji(card: str) -> str:
     Args:
         card (str): card string, for example: As, 2c, Td
     """
-    kind = kinds[int(card[1])]
+    kind = kinds[card[1]]
     num = card[0]
     if num == "T":
         num = "10"
