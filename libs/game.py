@@ -322,15 +322,15 @@ class Game(object):
 
 class Deck(object):
     def __init__(self):
-        self.deckCards = list(range(0, 52))
+        self.deck_cards = list(range(0, 52))
         self.shuffle()
 
     def get_card(self):
-        num = self.deckCards[self.i]
+        num = self.deck_cards[self.i]
         card = Card(int(num / 13), num % 13 + 1)
         self.i = self.i + 1
         return card
 
     def shuffle(self):
-        random.shuffle(self.deckCards)
+        random.shuffle(self.deck_cards)
         self.i = 0
