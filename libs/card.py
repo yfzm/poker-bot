@@ -7,33 +7,22 @@ class Color(Enum):
     CLUB = 2
     DIAMOD = 3
 
+    @classmethod
+    def has(cls, ele) -> bool:
+        return ele in cls._value2member_map_
+
 
 class Card(object):
-    def __init__(self, color, num):
-        if color == 0:
-            self.color = 's'
-        elif color == 1:
-            self.color = 'h'
-        elif color == 2:
-            self.color = 'c'
-        elif color == 3:
-            self.color = 'd'
+    _NUM2CHAR = ['Error' + 'A'] + [i for i in range(1, 11)] + ['J', 'Q', 'K']
 
-        if num == 1:
-            self.num = 'A'
-        elif num == 10:
-            self.num = 'T'
-        elif num == 11:
-            self.num = 'J'
-        elif num == 12:
-            self.num = 'Q'
-        elif num == 13:
-            self.num = 'K'
-        else:
-            self.num = num
+    def __init__(self, color, num):
+        if not Color.has(color) or num < 1 or num > 13:
+            raise ValueError
+        self.color = Color(color)
+        self.num = num
 
     def __repr__(self):
-        return '{}{}'.format(self.num, self.color)
+        return f'{Card._NUM2CHAR[self.num]}{self.color.value}'
 
     def __str__(self):
-        return '{}{}'.format(self.num, self.color)
+        return f'{Card._NUM2CHAR[self.num]}{self.color.value}'
