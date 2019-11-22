@@ -1,39 +1,19 @@
 from enum import Enum
 
 
-class Color(Enum):
-    SPADE = 0
-    HEART = 1
-    CLUB = 2
-    DIAMOD = 3
-
-
 class Card(object):
-    def __init__(self, color, num):
-        if color == 0:
-            self.color = 's'
-        elif color == 1:
-            self.color = 'h'
-        elif color == 2:
-            self.color = 'c'
-        elif color == 3:
-            self.color = 'd'
+    _COLOR = ['s', 'h', 'c', 'd']
+    _NUM2CHAR = ['Error', 'A'] + \
+        [i for i in range(2, 10)] + ['T', 'J', 'Q', 'K']
 
-        if num == 1:
-            self.num = 'A'
-        elif num == 10:
-            self.num = 'T'
-        elif num == 11:
-            self.num = 'J'
-        elif num == 12:
-            self.num = 'Q'
-        elif num == 13:
-            self.num = 'K'
-        else:
-            self.num = num
+    def __init__(self, color, num):
+        if color < 0 or color > 3 or num < 1 or num > 13:
+            raise ValueError
+        self.color = Card._COLOR[color]
+        self.num = num
 
     def __repr__(self):
-        return '{}{}'.format(self.num, self.color)
+        return f'{Card._NUM2CHAR[self.num]}{Card._COLOR[self.color]}'
 
     def __str__(self):
-        return '{}{}'.format(self.num, self.color)
+        return f'{Card._NUM2CHAR[self.num]}{Card._COLOR[self.color]}'

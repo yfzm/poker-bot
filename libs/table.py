@@ -96,18 +96,15 @@ class Table:
         def get_payload():
             info_list = []
             pos = self.game.sb
-            while True:
-                player = self.players[pos]
+            active_players = self.players[pos:] + self.players[:pos]
+            for player in active_players:
                 if player.active and not player.is_fold():
                     action = self.game.actions[player.user]
                     m_action = action.action if action.active else ""
                     m_chip = action.chip if action.active else 0
-                    info_list.append(build_info_str(player.user,
-                                                    player.get_remaining_chip(),
-                                                    m_action, m_chip, pos == exe_pos, self.countdown))
-                if pos == self.game.btn:
-                    break
-                pos = (pos + 1) % self.game.nplayers
+                    info_list.append(build_info_str(
+                        player.user, player.get_remaining_chip(), m_action, m_chip,
+                        self.players_user2pos[player.user] == exe_pos, self.countdown))
             return build_payload(self.game.pub_cards, self.game.total_pot, self.game.ante,
                                  self.players[self.game.btn].user, info_list)
 
