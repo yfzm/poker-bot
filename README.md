@@ -1,14 +1,25 @@
 # Poker Bot
 
-## 安装环境
+一款基于Slack的德州扑克机器人。
 
-本应用使用pipenv布置开发及生产环境。
+## 安装
 
-NOTICE: 本应用使用python3.7开发，运行时环境必须>=python 3.7。
-`pipenv install`
+您可以使用`pipenv`来安装依赖：
 
-## 使用说明
+```bash
+pipenv install
+```
 
-使用前应通过`SLACK_BOT_TOKEN`环境变量注入bot_token.
+运行程序前需要注入机器人的token：
 
-注入后，使用`python run.py`来运行应用。
+```bash
+export SLACK_BOT_TOKEN="xxxx"
+```
+
+最后运行`run.py`：
+
+```bash
+python run.py
+```
+
+> 注意: python版本至少为3.7。
