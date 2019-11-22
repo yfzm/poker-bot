@@ -192,7 +192,7 @@ def fold(web_client: slack.WebClient, channel: str, user: str):
     table_id = channels[channel].table_id
     err = gameManager.fold(table_id, user)
     if err is None:
-        send_msg(web_client, channel, f"{user} has folded")
+        send_msg(web_client, channel, "has folded", user)
     else:
         send_msg(web_client, channel, err)
 
