@@ -13,7 +13,8 @@ class Color(Enum):
 
 
 class Card(object):
-    _NUM2CHAR = ['Error' + 'A'] + [i for i in range(1, 11)] + ['J', 'Q', 'K']
+    _NUM2CHAR = ['Error', 'A'] + \
+        [i for i in range(1, 10)] + ['T''J', 'Q', 'K']
 
     def __init__(self, color, num):
         if not Color.has(color) or num < 1 or num > 13:

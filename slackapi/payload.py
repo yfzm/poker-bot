@@ -22,7 +22,7 @@ def card_to_emoji(card: str) -> str:
     Args:
         card (str): card string, for example: As, 2c, Td
     """
-    kind = kinds[card[1]]
+    kind = kinds[int(card[1])]
     num = card[0]
     if num == "T":
         num = "10"
