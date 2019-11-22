@@ -9,7 +9,7 @@ class Card(object):
     def __init__(self, color, num):
         if color < 0 or color > 3 or num < 1 or num > 13:
             raise ValueError
-        self.color = Card._COLOR[color]
+        self.color = color
         self.num = num
 
     def __repr__(self):
