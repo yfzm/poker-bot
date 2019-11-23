@@ -1,7 +1,7 @@
 from enum import IntEnum
 from functools import wraps
 from .card import Card
-from .pokerCmp import poker7
+from .poker_cmp import poker7
 import random
 from typing import List, Dict
 from .player import Player

@@ -2,9 +2,8 @@ from enum import Enum
 
 
 class Card(object):
-    _COLOR = ['s', 'h', 'c', 'd']
-    _NUM2CHAR = ['Error', 'A'] + \
-        [i for i in range(2, 10)] + ['T', 'J', 'Q', 'K']
+    _COLOR = 'shcd'
+    _NUM2CHAR = 'EA23456789TJQK'
 
     def __init__(self, color, num):
         if color < 0 or color > 3 or num < 1 or num > 13:
