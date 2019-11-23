@@ -109,7 +109,7 @@ class Table:
                                  self.players[self.game.btn].user, info_list)
 
         if self.countdown == 0:
-            # TODO: prefer check over flod
+            # TODO: prefer check over fold
             self.game.pfold(exe_pos)
             bgame.send_to_channel_by_table_id(
                 self.uid, f"timeout: {get_mentioned_string(self.players[exe_pos].user)} fold")
