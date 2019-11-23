@@ -1,10 +1,11 @@
-import slack
 import re
+from typing import Dict
+
+import slack
+
 from libs.manager import gameManager
 from slackapi.client import send_msg, send_private_msg_in_channel, update_msg
 from slackapi.payload import card_to_emoji
-from typing import Dict
-
 
 HELP_MSG = """Try commands below:
 open to create a table,
@@ -65,6 +66,7 @@ def create_table(web_client: slack.WebClient, channel: str, user: str):
 
     table_id = gameManager.open(user)
     channels[channel] = ChannelInfo(table_id, web_client)
+    gameManager.set_up(table_id)
     send_msg(web_client, channel,
              "Successfully opened a game! Everyone is free to join the table.")
     send_msg(web_client, channel,
