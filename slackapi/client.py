@@ -1,6 +1,20 @@
+from threading import Lock
+from functools import wraps
+
 import slack
 
+GLOCK = Lock()
 
+
+def synchronized(foo):
+    @wraps(foo)
+    def wrapper(*arg, **xarg):
+        with GLOCK:
+            return foo(*arg, **xarg)
+    return wrapper
+
+
+@synchronized
 def send_msg(web_client: slack.WebClient, channel: str, msg: str, user=None, blocks=None) -> str:
     """Send a message to a channel
 
@@ -28,6 +42,7 @@ def send_msg(web_client: slack.WebClient, channel: str, msg: str, user=None, blo
     return ts
 
 
+@synchronized
 def update_msg(web_client: slack.WebClient, channel: str, msg: str, ts: str, user=None, blocks=None):
     """Update a message
 
@@ -47,6 +62,7 @@ def update_msg(web_client: slack.WebClient, channel: str, msg: str, ts: str, use
         web_client.chat_update(channel=channel, ts=ts, blocks=blocks)
 
 
+@synchronized
 def send_private_msg_in_channel(web_client: slack.WebClient, channel: str, user: str, msg: str, blocks=None):
     """Sends an ephemeral message to a user in a channel.
 
@@ -63,50 +79,3 @@ def send_private_msg_in_channel(web_client: slack.WebClient, channel: str, user:
     else:
         web_client.chat_postEphemeral(
             channel=channel, user=user, blocks=blocks)
-
-
-# example payload:
-# [
-# 	{
-# 		"type": "section",
-# 		"text": {
-# 			"type": "mrkdwn",
-# 			"text": ":spades:*5*  :hearts:*7*  :clubs:*A*  :diamonds:*K* :clock12:  :b: :star: :large_blue_circle: :red_circle:"
-# 		}
-# 	},
-# 	{
-# 		"type": "divider"
-# 	},
-# 	{
-# 		"type": "section",
-# 		"text": {
-# 			"type": "mrkdwn",
-# 			"text": "*total pot: 1200\t\tlevel: 50/100\t\tbtn: <@Uabcdefg>*"
-# 		}
-# 	},
-# 	{
-# 		"type": "divider"
-# 	},
-# 	{
-# 		"type": "section",
-# 		"text": {
-# 			"type": "mrkdwn",
-# 			"text": "<@U122233>($200)  check\n<@Ufds2333>($500)  bet $200\n<@Uiofd234>($330)  :clock12: 49s\n<@Uedi1261>($220)"
-# 		}
-# 	}
-# ]
-
-# slack_response data
-# {
-#     'channel': 'CP3P9CS2W',
-#     'message': {
-#         'bot_id': 'BP53KL083',
-#         'subtype': 'bot_message',
-#         'text': '<@UPGH1C1PF> test api',
-#         'ts': '1573487677.043700',
-#         'type': 'message',
-#         'username': 'Poker-bot'
-#     },
-#     'ok': True,
-#     'ts': '1573487677.043700'
-# }
