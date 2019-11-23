@@ -10,6 +10,7 @@ from slackapi.payload import get_mentioned_string, build_payload, build_info_str
 from .poker_bot import PokerBot
 from .player import Player
 
+START_AWAIT = 60
 MAX_AWAIT = 600
 INITIAL_CHIPS = 500
 BOT_NUM = 3
@@ -31,6 +32,36 @@ class Table:
         self.counter = 0  # number of games
         self.timer_thread = thread.Thread(target=self.timer_function)
         self.poker_bots: Dict[int, PokerBot] = {}
+        self._start_timer: thread.Thread = None
+        self.stoppable = False
+
+    def set_up(self):
+        if self._start_timer is not None:
+            self._start_timer.join()
+        self._start_timer = thread.Thread(target=self._start_count_down)
+        self._start_timer.start()
+
+    def set_down(self):
+        self.stoppable = True
+
+    def _start_count_down(self):
+        starttime = time.time()
+        start_ts, err = bgame.send_to_channel_by_table_id(
+            self.uid, msg=f"Game will start after {START_AWAIT} s!")
+        if err is not None:
+            raise RuntimeError
+        cur_time = time.time()
+        while cur_time - starttime < START_AWAIT:
+            elapsed_time = time.time() - cur_time
+            if elapsed_time < 1.0:
+                time.sleep(1.0 - elapsed_time)
+            if self.stoppable:
+                self.stoppable = False
+                return
+            cur_time = time.time()
+            bgame.update_msg_by_table_id(
+                self.uid, start_ts, msg=f"Game will start after {round(START_AWAIT - time.time() + starttime)} s!")
+        self.start(self.owner)
 
     def join(self, user_id):
         """Join a table, return (pos, nplayer, err)"""
@@ -59,6 +90,7 @@ class Table:
         return hands, None
 
     def continue_game(self, user_id):
+        # TODO: redesign
         self.timer_thread.join()
         self.timer_thread = thread.Thread(target=self.timer_function)
         self.btn = (self.btn + 1) % len(self.players)
@@ -109,7 +141,7 @@ class Table:
                                  self.players[self.game.btn].user, info_list)
 
         if self.countdown == 0:
-            # TODO: prefer check over flod
+            # TODO: prefer check over fold
             self.game.pfold(exe_pos)
             bgame.send_to_channel_by_table_id(
                 self.uid, f"timeout: {get_mentioned_string(self.players[exe_pos].user)} fold")

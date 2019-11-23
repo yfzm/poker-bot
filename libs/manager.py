@@ -27,6 +27,10 @@ class GameManager:
         self.join(table.uid, user_id)  # Error handling?
         return table.uid
 
+    def set_up(self, table_id):
+        table = self.tables[table_id]
+        table.set_up()
+
     def join(self, table_id, user_id):
         """Join a table, return (pos, nplayer, err)"""
         table = self.tables[table_id]
@@ -35,6 +39,7 @@ class GameManager:
     def start(self, table_id, user_id):
         """Start a game, return (hands, err)"""
         table = self.tables[table_id]
+        table.set_down()
         return table.start(user_id)
 
     def continue_game(self, table_id, user_id):
