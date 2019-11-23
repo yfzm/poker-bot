@@ -23,3 +23,9 @@ python run.py
 ```
 
 > 注意: python版本至少为3.7。
+
+## 部署
+
+使用[Git-Auto-Deploy](https://github.com/olipo186/Git-Auto-Deploy)来自动化部署，配置请参考[这里](https://github.com/olipo186/Git-Auto-Deploy/blob/master/docs/Configuration.md)。
+
+当新的PR成功合并到dev上时，会自动触发执行部署脚本`deploy.sh`。
