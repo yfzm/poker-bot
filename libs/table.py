@@ -94,9 +94,9 @@ class Table:
         while True:
             starttime = time.time()
             should_stop = self.mainloop()
-            self.bot_function()
             if should_stop:
                 break
+            self.bot_function()
             elapsed_time = time.time() - starttime
             if elapsed_time < 1.0:
                 time.sleep(1.0 - elapsed_time)
