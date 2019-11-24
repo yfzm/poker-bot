@@ -4,7 +4,8 @@ from .card import Card
 from .poker_cmp import poker7
 import random
 from typing import List, Dict
-from .player import Player
+from .player import Player, PlayerStatus
+import threading
 
 
 class GameStatus(IntEnum):
@@ -24,10 +25,12 @@ def status(ss):
     def dec(func):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
+            self.lock.acquire()
+            ret = -1
             if self.game_status in ss:
-                return func(self, *args, **kwargs)
-            # TODO: using exception or error to handle this
-            return -1
+                ret = func(self, *args, **kwargs)
+            self.lock.release()
+            return ret
         return wrapper
     return dec
 
@@ -78,6 +81,7 @@ class Game(object):
         self.highest_bet = 0
         self.last_round_bet = 0
         self.result = Result()
+        self.lock = threading.RLock()
         self.actions: Dict[str, Action] = dict()
 
     def init_game(self, players: List[Player], ante: int, btn: int):
