@@ -1,11 +1,12 @@
 from enum import IntEnum
 from functools import wraps
 from .card import Card
-from .pokerCmp import poker7
+from .poker_cmp import poker7
 import random
 from typing import List, Dict
 from .player import Player, PlayerStatus
 import threading
+
 
 class GameStatus(IntEnum):
     WAITING = 1
@@ -46,17 +47,27 @@ class Result:
 
     def lose_bet(self, player: Player, chip: int):
         self.chip_changes[player] -= chip
-    
+
     def execute(self):
         for player, chip in self.chip_changes.items():
             player.chip += chip
+
+
+class Action:
+    def __init__(self, action: str, chip: int, active=True):
+        self.action = action
+        self.chip = chip
+        self.active = active
+
+    def set_disabled(self):
+        self.active = False
 
 
 class Game(object):
     def __init__(self):
         self.players: List[Player] = []
         self.game_status: GameStatus = GameStatus.WAITING
-        self.roundStatus: RoundStatus = None
+        self.round_status: RoundStatus = None
         self.nplayers = 0
         self.deck: Deck = None
         self.btn = 0
@@ -68,14 +79,18 @@ class Game(object):
         self.total_pot = 0
         self.pub_cards = []
         self.highest_bet = 0
+        self.last_round_bet = 0
         self.result = Result()
         self.lock = threading.RLock()
+        self.actions: Dict[str, Action] = dict()
 
     def init_game(self, players: List[Player], ante: int, btn: int):
         self.players = players
+        self.actions.clear()
         for player in self.players:
             player.init()
-        self.roundStatus = RoundStatus.PREFLOP
+            self.actions[player.user] = Action("", 0, False)
+        self.round_status = RoundStatus.PREFLOP
         self.nplayers = len(self.players)
         self.deck = Deck()
         self.btn = btn
@@ -83,15 +98,16 @@ class Game(object):
         self.exe_pos = -1
         self.pub_cards = []
         self.highest_bet = 0
+        self.last_round_bet = 0
         self.result = Result()
         self.total_pot = 0
 
-    def getCardsByPos(self, pos):
+    def get_cards_by_pos(self, pos):
         player = self.players[pos]
         return player.cards
 
     def get_round_status_name(self):
-        return self.roundStatus.name
+        return self.round_status.name
 
     def get_exe_pos(self):
         return self.exe_pos
@@ -104,75 +120,74 @@ class Game(object):
 
         # deal all players
         for player in self.players:
-            player.cards[0] = self.deck.getCard()
-            player.cards[1] = self.deck.getCard()
+            player.cards[0] = self.deck.get_card()
+            player.cards[1] = self.deck.get_card()
 
         # blind
-        self.sb = self.findNextActivePlayer(self.btn)
-        self.bb = self.findNextActivePlayer(self.sb)
-        self.utg = self.findNextActivePlayer(self.bb)
+        self.sb = self.find_next_active_player(self.btn)
+        self.bb = self.find_next_active_player(self.sb)
+        self.utg = self.find_next_active_player(self.bb)
 
         # a flag for end of one round
         self.exe_pos = self.utg
-        self.nextRound = self.utg
+        self.next_round = self.utg
 
-        self.putChip(self.sb, self.ante // 2, 'SB')
-        self.putChip(self.bb, self.ante, 'BB')
+        self.put_chip(self.sb, self.ante // 2, 'SB')
+        self.put_chip(self.bb, self.ante, 'BB')
         self.highest_bet = self.ante
 
         return 0
 
-    def findNextActivePlayer(self, pos):
+    def find_next_active_player(self, pos):
         new_pos = (pos + 1) % self.nplayers
-        while not(self.players[pos].active and self.players[pos].is_playing()):
+        while not(self.players[new_pos].active and self.players[new_pos].is_playing()):
             if new_pos == pos:
                 return -1
             new_pos = (new_pos + 1) % self.nplayers
 
         return new_pos if new_pos != pos else -1
 
-    def invokeNextPlayer(self):
-        r = self.findNextActivePlayer(self.exe_pos)
-        if r == -1:
-            self.gend()
-        else:
-            self.exe_pos = r
-
-        # touch the bound
-        if self.roundStatus != RoundStatus.END and self.exe_pos == self.nextRound:
-            if self.roundStatus == RoundStatus.PREFLOP:
-                self.flop()
-            elif self.roundStatus == RoundStatus.FLOP:
-                self.turn()
-            elif self.roundStatus == RoundStatus.TURN:
-                self.river()
-            elif self.roundStatus == RoundStatus.RIVER:
-                self.end()
-                return
-            self.roundStatus = RoundStatus(self.roundStatus.value + 1)
-            # sb first
-            self.exe_pos = self.sb
-            self.nextRound = self.sb
-
-    def gend(self):
-        # continue round until end
-        if self.roundStatus.value < RoundStatus.FLOP.value:
-            self.flop()
-        if self.roundStatus.value < RoundStatus.TURN.value:
-            self.turn()
-        if self.roundStatus.value < RoundStatus.RIVER.value:
-            self.river()
-        if self.roundStatus.value < RoundStatus.END.value:
+    def invoke_next_player(self):
+        if self.get_active_player_num() == 1:
             self.end()
+            return
+
+        r = self.find_next_active_player(self.exe_pos)
+        if r == -1:
+            # all-in case
+            self.pub_cards += [self.deck.get_card()
+                               for i in range(len(self.pub_cards), 5)]
+            self.end()
+            return
+
+        if r == self.next_round:
+            # enter next phase
+            self.round_status = RoundStatus(self.round_status.value + 1)
+            self.last_round_bet = self.highest_bet
+            if self.round_status == RoundStatus.FLOP:
+                self.flop()
+            elif self.round_status == RoundStatus.TURN:
+                self.turn()
+            elif self.round_status == RoundStatus.RIVER:
+                self.river()
+            elif self.round_status == RoundStatus.END:
+                self.end()
+            for player in self.players:
+                self.actions[player.user].set_disabled()
+            self.exe_pos = self.sb
+            self.next_round = self.sb
+            return
+
+        self.exe_pos = r
 
     def flop(self):
-        self.pub_cards = [self.deck.getCard() for i in range(3)]
+        self.pub_cards = [self.deck.get_card() for i in range(3)]
 
     def turn(self):
-        self.pub_cards.append(self.deck.getCard())
+        self.pub_cards.append(self.deck.get_card())
 
     def river(self):
-        self.pub_cards.append(self.deck.getCard())
+        self.pub_cards.append(self.deck.get_card())
 
     def win_pot(self, winners: List[Player], exclude_players: List[Player]):
         """Calculate how many chips the `winner` wins and set result for all players
@@ -189,26 +204,28 @@ class Game(object):
             if player in winners or player in exclude_players:
                 continue
             for winner in winners:
-                could_win = min(player.chipBet, winner.chipBet)
+                could_win = min(player.chip_bet, winner.chip_bet)
                 self.result.win_bet(winner, could_win // n_winners)
                 self.result.lose_bet(player, could_win // n_winners)
-                player.chipBet -= could_win
+                player.chip_bet -= could_win
 
     def end(self):
         # Initialize self.result
         for player in self.players:
             self.result.add_result(player, 0)
-        
-        active_players: List[Player] = list(filter(lambda p: p.active and not p.is_fold(), self.players))
+
+        active_players: List[Player] = list(
+            filter(lambda p: p.active and not p.is_fold(), self.players))
         if len(active_players) == 0:
             raise RuntimeError("No active player?")
 
         # Only when there are more than two active players, comparision is needed
         if len(active_players) >= 2:
             for p in active_players:
-                hand, rank = poker7(list(map(lambda card: str(card), p.cards + self.pub_cards)))
+                hand, rank = poker7(
+                    list(map(lambda card: str(card), p.cards + self.pub_cards)))
                 p.set_rank_and_hand(rank, hand)
-            active_players.sort(key=lambda p: p.chipBet, reverse=False)
+            active_players.sort(key=lambda p: p.chip_bet, reverse=False)
             active_players.sort(key=lambda p: p.rank, reverse=True)
 
         winner_players = []
@@ -224,7 +241,7 @@ class Game(object):
                 last_rank = p.rank
         self.win_pot(winner_players, exclude_players)
 
-        self.roundStatus = RoundStatus.END
+        self.round_status = RoundStatus.END
         self.game_status = GameStatus.WAITING
 
     def get_active_player_num(self):
@@ -234,25 +251,27 @@ class Game(object):
                 count += 1
         return count
 
-    def putChip(self, pos, num, action):
+    def put_chip(self, pos, num, action):
         player = self.players[pos]
         remaining_chip = player.get_remaining_chip()
         if remaining_chip < num:
             return -1
         if remaining_chip == num:
             player.set_allin()
-        player.chipBet += num
+        player.chip_bet += num
         self.total_pot += num
         return 0
 
     def is_check_permitted(self, pos):
-        return self.players[pos].chipBet >= self.highest_bet
+        return self.players[pos].chip_bet >= self.highest_bet
 
     @status([GameStatus.RUNNING])
     def pcall(self, pos):
-        if pos != self.exe_pos or self.putChip(pos, self.highest_bet - self.players[pos].chipBet, 'CALL') < 0:
+        if pos != self.exe_pos or self.put_chip(pos, self.highest_bet - self.players[pos].chip_bet, 'CALL') < 0:
             return -1
-        self.invokeNextPlayer()
+        self.actions[self.players[pos].user] = Action(
+            "call", self.players[pos].chip_bet - self.last_round_bet)
+        self.invoke_next_player()
         return 0
 
     @status([GameStatus.RUNNING])
@@ -260,19 +279,16 @@ class Game(object):
         if pos != self.exe_pos:
             return -1
         self.players[pos].set_fold()
-
-        # end of a game
-        if self.get_active_player_num() == 1:
-            self.end()
-        else:
-            self.invokeNextPlayer()
+        self.actions[self.players[pos].user] = Action("fold", 0)
+        self.invoke_next_player()
         return 0
 
     @status([GameStatus.RUNNING])
     def pcheck(self, pos):
         if pos != self.exe_pos or not self.is_check_permitted(pos):
             return -1
-        self.invokeNextPlayer()
+        self.actions[self.players[pos].user] = Action("check", 0)
+        self.invoke_next_player()
         return 0
 
     @status([GameStatus.RUNNING])
@@ -281,10 +297,12 @@ class Game(object):
         if pos != self.exe_pos:
             return -1
 
-        self.nextRound = self.exe_pos
-        self.putChip(pos, num, 'RAISE')
-        self.highest_bet = self.players[pos].chipBet
-        self.invokeNextPlayer()
+        self.next_round = self.exe_pos
+        self.put_chip(pos, num, 'RAISE')
+        self.actions[self.players[pos].user] = Action(
+            "raise", self.players[pos].chip_bet - self.last_round_bet)
+        self.highest_bet = self.players[pos].chip_bet
+        self.invoke_next_player()
         return 0
 
     @status([GameStatus.RUNNING])
@@ -295,9 +313,11 @@ class Game(object):
         # does allin raise the chip?
         if self.players[pos].chip > self.highest_bet:
             self.highest_bet = self.players[pos].chip
-            self.nextRound = self.exe_pos
-        self.putChip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
-        self.invokeNextPlayer()
+            self.next_round = self.exe_pos
+        self.put_chip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
+        self.actions[self.players[pos].user] = Action(
+            "all-in", self.players[pos].chip_bet - self.last_round_bet)
+        self.invoke_next_player()
         return 0
 
     def getJSON(self):
@@ -306,15 +326,15 @@ class Game(object):
 
 class Deck(object):
     def __init__(self):
-        self.deckCards = list(range(0, 52))
+        self.deck_cards = list(range(0, 52))
         self.shuffle()
 
-    def getCard(self):
-        num = self.deckCards[self.i]
+    def get_card(self):
+        num = self.deck_cards[self.i]
         card = Card(int(num / 13), num % 13 + 1)
         self.i = self.i + 1
         return card
 
     def shuffle(self):
-        random.shuffle(self.deckCards)
+        random.shuffle(self.deck_cards)
         self.i = 0

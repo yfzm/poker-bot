@@ -1,11 +1,8 @@
 import slack
-from slackbot.bot import respond_to
-from slackbot.bot import listen_to
 import re
 from libs.manager import gameManager
-from .message_helper import *
-import threading
-from slackapi.client import *
+from slackapi.client import send_msg, send_private_msg_in_channel, update_msg
+from slackapi.payload import card_to_emoji
 from typing import Dict
 
 
@@ -57,7 +54,7 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
             send_msg(web_client, channel, HELP_MSG, user)
 
 
-channels: Dict[str, ChannelInfo]  = dict()
+channels: Dict[str, ChannelInfo] = dict()
 
 
 def create_table(web_client: slack.WebClient, channel: str, user: str):
@@ -72,6 +69,7 @@ def create_table(web_client: slack.WebClient, channel: str, user: str):
              "Successfully opened a game! Everyone is free to join the table.")
     send_msg(web_client, channel,
              f"is the table owner and just sat at position 0", user)
+
 
 def join_table(web_client: slack.WebClient, channel: str, user: str):
     # TODO: use wrapper to check channel
@@ -105,11 +103,15 @@ def start_game(web_client: slack.WebClient, channel: str, user: str):
         send_msg(web_client, channel, err)
         return
     for hand in hands:
+        card_str = ""
+        for card in hand['hand']:
+            card_str += card_to_emoji(str(card)) + "  "
         if not hand['id'].startswith("bot"):
             send_private_msg_in_channel(
-                web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
+                # web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
+                web_client, channel, hand["id"], f"Your hand is {card_str}")
         else:
-            send_msg(web_client, channel, f"{hand['id']} has {hand['hand']}")
+            send_msg(web_client, channel, f"{hand['id']} has {card_str}")
     send_msg(web_client, channel,
              "Game started! I have send your hand to you personnaly.")
 
@@ -126,13 +128,17 @@ def continue_game(web_client: slack.WebClient, channel: str, user: str):
         send_msg(web_client, channel, err)
         return
     for hand in hands:
+        card_str = ""
+        for card in hand['hand']:
+            card_str += card_to_emoji(str(card)) + "  "
         if not hand['id'].startswith("bot"):
             send_private_msg_in_channel(
-                web_client, channel, hand["id"], f"Your hand is {hand['hand']}")
+                web_client, channel, hand["id"], f"Your hand is {card_str}")
         else:
-            send_msg(web_client, channel, f"{hand['id']} has {hand['hand']}")
+            send_msg(web_client, channel, f"{hand['id']} has {card_str}")
     send_msg(web_client, channel,
              "Game started! I have send your hand to you personnaly.")
+
 
 def add_bot(web_client: slack.WebClient, channel: str):
     if channel not in channels.keys():
@@ -144,6 +150,7 @@ def add_bot(web_client: slack.WebClient, channel: str):
     if err is not None:
         send_msg(web_client, channel, err)
         return
+
 
 def bet(web_client: slack.WebClient, channel: str, user: str, chip):
     table_id = channels[channel].table_id
@@ -185,7 +192,7 @@ def fold(web_client: slack.WebClient, channel: str, user: str):
     table_id = channels[channel].table_id
     err = gameManager.fold(table_id, user)
     if err is None:
-        send_msg(web_client, channel, f"{user} has folded")
+        send_msg(web_client, channel, "has folded", user)
     else:
         send_msg(web_client, channel, err)
 
@@ -195,17 +202,17 @@ def echo_info(web_client: slack.WebClient, channel: str):
     send_msg(web_client, channel, gameManager.get_game_info(table_id))
 
 
-def send_to_channel_by_table_id(table_id, msg):
+def send_to_channel_by_table_id(table_id, msg="void", blocks=None):
     for (channel, info) in channels.items():
         if info.table_id == table_id:
-            ts = send_msg(info.client, channel, msg)
+            ts = send_msg(info.client, channel, msg, blocks=blocks)
             return ts, None
     return None, "table_id not found"
 
 
-def update_msg_by_table_id(table_id, ts, msg):
+def update_msg_by_table_id(table_id, ts, msg="void", blocks=None):
     for (channel, info) in channels.items():
         if info.table_id == table_id:
-            update_msg(info.client, channel, msg, ts)
+            update_msg(info.client, channel, msg, ts, blocks=blocks)
             return None
     return "table_id not found"

@@ -1,12 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from libs.game import Game
-import threading as thread
 from typing import Dict
-import time
-import bots.game as bgame
-from typing import Dict
-from slackapi.client import get_mentioned_string
 from .table import Table
 
 MAX_PLAYER = 9
