@@ -32,6 +32,11 @@ class GameManager:
         table = self.tables[table_id]
         return table.join(user_id)
 
+    def leave(self, table_id, user_id):
+        """Leave a table, return (nplayer, err)"""
+        table = self.tables[table_id]
+        return table.leave(user_id)
+
     def start(self, table_id, user_id):
         """Start a game, return (hands, err)"""
         table = self.tables[table_id]

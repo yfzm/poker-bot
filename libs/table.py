@@ -42,6 +42,18 @@ class Table:
         self.players_user2pos[player.user] = pos
         return pos, pos + 1, None
 
+    def leave(self, user_id):
+        """Leave a table, return (nplayer, err)"""
+        if user_id not in list(map(lambda player: player.user, self.players)):
+            return -1, "is not in this table"
+        player_pos = self.players_user2pos[user_id]
+        self.players.remove(self.players[player_pos])
+        # update self.players_user2pos
+        self.players_user2pos.clear()
+        for pos, player in enumerate(self.players):
+            self.players_user2pos[player.user] = pos
+        return len(self.players), None
+
     def start(self, user_id):
         """Start a game, return (hands, err)"""
         # if user_id != self.owner:
