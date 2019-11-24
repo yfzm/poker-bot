@@ -21,16 +21,10 @@ class PokerBot:
             if game.pcheck(self.pos):
                 bgame.send_to_channel_by_table_id(
                     self.table, f"bot {self.pos} check fail")
-            else:
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} check")
         elif game.players[self.pos].chip >= game.highest_bet:
             if game.pcall(self.pos):
                 bgame.send_to_channel_by_table_id(
                     self.table, f"bot {self.pos} call fail")
-            else:
-                bgame.send_to_channel_by_table_id(
-                    self.table, f"bot {self.pos} call")
         else:
             if game.pfold(self.pos):
                 bgame.send_to_channel_by_table_id(
