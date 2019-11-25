@@ -4,7 +4,7 @@ from .card import Card
 from .poker_cmp import poker7
 import random
 from typing import List, Dict
-from .player import Player, PlayerStatus
+from .player import Player
 import threading
 
 

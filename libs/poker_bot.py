@@ -10,6 +10,7 @@ INITIAL_CHIPS = 500
 
 logger = logging.getLogger(__name__)
 
+
 class PokerBot:
     def __init__(self, table_id):
         self.chip = INITIAL_CHIPS

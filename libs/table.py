@@ -17,6 +17,7 @@ BOT_NUM = 3
 
 logger = logging.getLogger(__name__)
 
+
 class Table:
     def __init__(self, owner: str):
         self.uid = str(uuid.uuid4())
