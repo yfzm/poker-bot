@@ -65,6 +65,11 @@ def build_info_str(user: str, remainning_chip: int, action: str, chip: int, is_w
 
 def build_payload(pub_cards: List[str], pot: int, ante: int, btn_userid: str, infos: List[str]) -> List[object]:
     ret = []
+
+    ret.append({
+        "type": "divider"
+    })
+
     if len(pub_cards) > 0:
         card_str = ""
         for card in pub_cards:
