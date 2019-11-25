@@ -104,7 +104,7 @@ def leave_table(web_client: slack.WebClient, channel: str, user: str):
     if err is not None:
         send_msg(web_client, channel, err)
         return
-    
+
     send_msg(web_client, channel, f"just leaf the table, total player: {nplayer}", user)
 
 

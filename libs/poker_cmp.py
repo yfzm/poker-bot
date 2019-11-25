@@ -2,9 +2,6 @@ from itertools import combinations
 
 
 def _card_ranks(cards):
-    '''
-        
-    '''
     ranks = ['0123456789TJQKA'.index(r) for r, x in cards]
     ranks.sort(reverse=True)
     if ranks == [14, 5, 4, 3, 2]:

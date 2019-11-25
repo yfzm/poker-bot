@@ -1,5 +1,3 @@
-from enum import Enum
-
 
 class Card(object):
     _COLOR = 'shcd'

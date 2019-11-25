@@ -3,6 +3,13 @@ import os
 import ssl as ssl_lib
 import certifi
 from bots.game import handle_message
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+logger = logging.getLogger(__name__)
 
 
 @slack.RTMClient.run_on(event="message")
@@ -12,7 +19,7 @@ def test_rtm_client(**payload):
 
     # filter bot message
     if "subtype" in data.keys():
-        print(f"emit a {data['subtype']} message")
+        logger.info(f"emit a {data['subtype']} message")
         return
 
     web_client = payload["web_client"]
