@@ -6,6 +6,8 @@ import random
 from typing import List, Dict
 from .player import Player
 import threading
+import logging
+import uuid
 
 
 class GameStatus(IntEnum):
@@ -83,6 +85,8 @@ class Game(object):
         self.result = Result()
         self.lock = threading.RLock()
         self.actions: Dict[str, Action] = dict()
+        self.id = uuid.uuid4()
+        self.logger = logging.getLogger(__name__)
 
     def init_game(self, players: List[Player], ante: int, btn: int):
         self.players = players
@@ -143,7 +147,7 @@ class Game(object):
 
     def find_next_active_player(self, pos):
         new_pos = (pos + 1) % self.nplayers
-        while not(self.players[new_pos].active and self.players[new_pos].is_playing()):
+        while not(self.players[new_pos].is_normal() and self.players[new_pos].is_playing()):
             if new_pos == pos:
                 return -1
             new_pos = (new_pos + 1) % self.nplayers
@@ -151,11 +155,14 @@ class Game(object):
         return new_pos if new_pos != pos else -1
 
     def invoke_next_player(self):
+        self.logger.debug("%s: invoke next player", self.id)
         if self.get_active_player_num() == 1:
+            self.logger.debug("%s: invoke next player, player_num == 1, go to end", self.id)
             self.end()
             return
 
         r = self.find_next_active_player(self.exe_pos)
+        self.logger.debug("%s: invoke next player, next pos %d", self.id, r)
         if r == -1:
             # all-in case
             self.pub_cards += [self.deck.get_card()
@@ -163,6 +170,9 @@ class Game(object):
             self.end()
             return
 
+        self.logger.debug("%s: invoke next player, next round %d", self.id, self.next_round)
+
+        self.exe_pos = r
         if r == self.next_round:
             # enter next phase
             self.round_status = RoundStatus(self.round_status.value + 1)
@@ -179,9 +189,9 @@ class Game(object):
                 self.actions[player.user].set_disabled()
             self.exe_pos = self.sb
             self.next_round = self.sb
-            return
-
-        self.exe_pos = r
+        # fold or allin at beginning
+        if not self.players[self.next_round].is_playing():
+            self.next_round = self.find_next_active_player(self.next_round)
 
     def flop(self):
         self.pub_cards = [self.deck.get_card() for i in range(3)]
@@ -218,7 +228,7 @@ class Game(object):
             self.result.add_result(player, 0)
 
         active_players: List[Player] = list(
-            filter(lambda p: p.active and not p.is_fold(), self.players))
+            filter(lambda p: p.is_normal() and not p.is_fold(), self.players))
         if len(active_players) == 0:
             raise RuntimeError("No active player?")
 
@@ -250,7 +260,7 @@ class Game(object):
     def get_active_player_num(self):
         count = 0
         for player in self.players:
-            if player.active and not player.is_fold():
+            if player.is_normal() and not player.is_fold():
                 count += 1
         return count
 
