@@ -13,7 +13,7 @@ import logging
 
 MAX_AWAIT = 600
 INITIAL_CHIPS = 500
-BOT_NUM = 3
+TIMEOUT = 600
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,9 @@ class Table:
         self.ante = 20
         self.counter = 0  # number of games
         self.timer_thread = thread.Thread(target=self.timer_function)
+        self.timeout_thread = thread.Thread(target=self.timeout_function)
+        self.timeout_counter = TIMEOUT
+        self.timeout_thread.start()
         self.poker_bots: Dict[str, PokerBot] = {}
 
     def join(self, user_id):
@@ -43,6 +46,7 @@ class Table:
         player = Player(user_id)
         self.players.append(player)
         self.players_user2pos[player.user] = pos
+        self.timeout_counter = TIMEOUT
         return pos, pos + 1, None
 
     def leave(self, user_id):
@@ -50,23 +54,25 @@ class Table:
         if user_id not in list(map(lambda player: player.user, self.players)):
             return -1, "is not in this table"
         player_pos = self.players_user2pos[user_id]
-        self.players.remove(self.players[player_pos])
-        # update self.players_user2pos
-        self.players_user2pos.clear()
-        for pos, player in enumerate(self.players):
-            self.players_user2pos[player.user] = pos
-        return len(self.players), None
+        self.players[player_pos].set_leaving()
+        return len(self.players), None  # FIXME: maybe do not return nplayer
 
     def start(self, user_id):
         """Start a game, return (hands, err)"""
         # if user_id != self.owner:
         #     return None, "Failed to start, because only the one who open the table can start the game"
-        if len(self.players) < 2:
+        active_players = list(filter(lambda p: not p.is_leaving(), self.players))
+        if len(active_players) < 2:
             return None, "Failed to start, because this game requires at least TWO players"
-        self.game.start(self.players, self.ante, self.btn)
+        for player in active_players:
+            player.set_normal()
+        self.update_user2pos()
+        self.timeout_counter = -1
+        self.timeout_thread.join()
+        self.game.start(active_players, self.ante, self.btn)
         logger.debug("%s: game start successfully", self.uid)
         hands = []
-        for pos, player in enumerate(self.players):
+        for pos, player in enumerate(active_players):
             hands.append({
                 "id": player.user,
                 "hand": self.game.get_cards_by_pos(pos)
@@ -75,10 +81,18 @@ class Table:
         return hands, None
 
     def continue_game(self, user_id):
+        self.players = list(filter(lambda p: not p.is_leaving(), self.players))
+        # TODO: check if game is running
         self.timer_thread.join()
         self.timer_thread = thread.Thread(target=self.timer_function)
+        # TODO: maybe not always point to the next
         self.btn = (self.btn + 1) % len(self.players)
         return self.start(user_id)
+
+    def update_user2pos(self):
+        self.players_user2pos.clear()
+        for pos, player in enumerate(self.players):
+            self.players_user2pos[player.user] = pos
 
     def add_bot_player(self):
         bot_id = f"bot_player_{len(self.poker_bots)}"
@@ -99,7 +113,27 @@ class Table:
         if exe_player.user in self.poker_bots:
             self.poker_bots[exe_player.user].react(game, game.exe_pos)
 
+    def timeout_function(self):
+        while self.timeout_counter > 0:
+            time.sleep(1)
+            self.timeout_counter -= 1
+            if self.timeout_counter == 0:
+                logger.info("timeout")
+                self.countdown = MAX_AWAIT
+                self.exe_pos_local = -1
+                self.round_status_local = ""
+                self.msg_ts = ""
+                self.btn = 0
+                self.ante = 20
+                self.counter = 0  # number of games
+                self.timer_thread = thread.Thread(target=self.timer_function)
+                self.timeout_thread = thread.Thread(target=self.timeout_function)
+                self.timeout_counter = TIMEOUT
+                self.poker_bots: Dict[str, PokerBot] = {}
+                return
+
     def timer_function(self):
+        time.sleep(3)
         while True:
             logger.debug("%s: timer trigger", self.uid)
             starttime = time.time()
@@ -121,7 +155,7 @@ class Table:
             pos = self.game.sb
             active_players = self.players[pos:] + self.players[:pos]
             for player in active_players:
-                if player.active and not player.is_fold():
+                if player.is_normal() and not player.is_fold():
                     action = self.game.actions[player.user]
                     m_action = action.action if action.active else ""
                     m_chip = action.chip if action.active else 0
@@ -169,11 +203,20 @@ class Table:
             bgame.update_msg_by_table_id(
                 self.uid, self.msg_ts, blocks=get_payload())
 
+        if not self.game.players[self.game.exe_pos].is_normal():
+            self.game.pfold(self.game.exe_pos)
+            bgame.send_to_channel_by_table_id(
+                self.uid, f"leaving: {get_mentioned_string(self.players[exe_pos].user)} fold")
+            self.countdown = MAX_AWAIT
+            return False
+
         if round_status == "END":
             logger.debug("%s: mainloop exit", self.uid)
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
             self.game.result.execute()
             self.show_result(self.game.result)
+            self.timeout_thread = thread.Thread(target=self.timeout_function)
+            self.timeout_thread.start()
             return True
 
         self.exe_pos_local = exe_pos
@@ -220,9 +263,10 @@ class Table:
         info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].user)}\n"
         info_str += f"next_round: {self.game.next_round} {get_mentioned_string(self.players[self.game.next_round].user)}\n"
         info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}\n"
-        for pos, player in enumerate(self.players):
+        for pos, player in enumerate(self.game.players):
             info_str += f"{get_mentioned_string(player.user)}: chip {player.chip}, \
                         total_bet {player.chip_bet}, cards {player.cards}, "
-            info_str += f"can_check {self.game.is_check_permitted(pos)}, active {player.active}, status {player.status.name}, "
+            info_str += f"can_check {self.game.is_check_permitted(pos)}, "
+            info_str += f"mode {player.mode.name}, status {player.status.name}, "
             info_str += f"rank {player.rank}, hand {player.hand}\n"
         return info_str
