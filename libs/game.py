@@ -111,7 +111,10 @@ class Game(object):
         return player.cards
 
     def get_round_status_name(self):
-        return self.round_status.name
+        if self.round_status:
+            return self.round_status.name
+        else:
+            return ""
 
     def get_exe_pos(self):
         return self.exe_pos
