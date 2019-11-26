@@ -2,6 +2,7 @@ import sqlite3
 from enum import Enum
 import logging
 
+
 class StorageBackend(Enum):
     SQLITE = 0
 
@@ -21,8 +22,7 @@ class Storage(object):
             """CREATE TABLE IF NOT EXISTS user(
             userid VARCHAR(50) PRIMARY KEY,
             chips INT
-            );"""
-            )
+            );""")
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS usertable(
             tableid VARCHAR(50),
@@ -49,8 +49,7 @@ class Storage(object):
                 current_chips = cursor.fetchone()[0]
                 cursor.execute(
                     """UPDATE user SET chips = ? WHERE userid = ?;""",
-                    (current_chips + record[2], record[1])
-                    )
+                    (current_chips + record[2], record[1]))
             cursor.execute("""DELETE FROM usertable;""")
         except Exception:
             pass
@@ -77,7 +76,7 @@ class Storage(object):
     def show_user_chip(self, userid):
         try:
             return self.conn.execute("""SELECT chips FROM user WHERE user.userid = ?""", (userid,)).fetchone()[0]
-        except:
+        except Exception:
             return 0
 
     def transfer_user_chip_to_table(self, userid: str, maxChip: int, tableid: str):

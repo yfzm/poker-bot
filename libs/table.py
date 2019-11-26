@@ -279,4 +279,3 @@ class Table:
             info_str += f"mode {player.mode.name}, status {player.status.name}, "
             info_str += f"rank {player.rank}, hand {player.hand}\n"
         return info_str
-
