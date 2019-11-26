@@ -144,7 +144,7 @@ class Game(object):
 
     def find_next_active_player(self, pos):
         new_pos = (pos + 1) % self.nplayers
-        while not(self.players[new_pos].active and self.players[new_pos].is_playing()):
+        while not(self.players[new_pos].is_normal() and self.players[new_pos].is_playing()):
             if new_pos == pos:
                 return -1
             new_pos = (new_pos + 1) % self.nplayers
@@ -225,7 +225,7 @@ class Game(object):
             self.result.add_result(player, 0)
 
         active_players: List[Player] = list(
-            filter(lambda p: p.active and not p.is_fold(), self.players))
+            filter(lambda p: p.is_normal() and not p.is_fold(), self.players))
         if len(active_players) == 0:
             raise RuntimeError("No active player?")
 
@@ -257,7 +257,7 @@ class Game(object):
     def get_active_player_num(self):
         count = 0
         for player in self.players:
-            if player.active and not player.is_fold():
+            if player.is_normal() and not player.is_fold():
                 count += 1
         return count
 

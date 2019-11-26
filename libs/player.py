@@ -10,16 +10,22 @@ class PlayerStatus(Enum):
     ALLIN = 2
 
 
+class PlayerMode(Enum):
+    ENTERING = 0
+    NORMAL = 1
+    LEAVING = 2
+
+
 class Player:
     def __init__(self, user: str):
         self.user = user
         self.chip = INITIAL_CHIPS
+        self.mode = PlayerMode.ENTERING
         self.init()
 
     def init(self):
         self.chip_bet = 0
         self.cards = [0] * 2
-        self.active = True
         self.status = PlayerStatus.PLAYING
         self.rank = None
         self.hand = None
@@ -48,3 +54,15 @@ class Player:
     def set_rank_and_hand(self, rank, hand):
         self.rank = rank
         self.hand = hand
+
+    def is_leaving(self) -> bool:
+        return self.mode == PlayerMode.LEAVING
+
+    def is_normal(self) -> bool:
+        return self.mode == PlayerMode.NORMAL
+
+    def set_normal(self) -> None:
+        self.mode = PlayerMode.NORMAL
+
+    def set_leaving(self) -> None:
+        self.mode = PlayerMode.LEAVING
