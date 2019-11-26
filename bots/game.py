@@ -28,6 +28,8 @@ class ChannelInfo:
 def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str, text: str, mentioned: bool):
     if text == "open":
         create_table(web_client, channel, user)
+    elif text == "opens":
+        create_table(web_client, channel, user, True)
     elif text == "join":
         join_table(web_client, channel, user)
     elif text == "start":
@@ -51,6 +53,12 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
         echo_info(web_client, channel)
     elif text == "bot":
         add_bot(web_client, channel)
+    elif text == "login":
+        login(web_client, channel, user)
+    elif text == "getchip":
+        get_chip(web_client, channel, user)
+    elif text == "mychip":
+        mychip(web_client, channel, user)
     else:
         if mentioned:
             send_msg(web_client, channel, HELP_MSG, user)
@@ -59,13 +67,13 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
 channels: Dict[str, ChannelInfo] = dict()
 
 
-def create_table(web_client: slack.WebClient, channel: str, user: str):
+def create_table(web_client: slack.WebClient, channel: str, user: str, persistent: bool = False):
     if channel in channels.keys():
         send_msg(web_client, channel,
                  "Failed to open a game, because there is an unfinished game in this channel!")
         return
 
-    table_id = gameManager.open(user)
+    table_id = gameManager.open(user, persistent)
     channels[channel] = ChannelInfo(table_id, web_client)
     send_msg(web_client, channel,
              "Successfully opened a game! Everyone is free to join the table.")
@@ -215,3 +223,24 @@ def update_msg_by_table_id(table_id, ts, msg="void", blocks=None):
             update_msg(info.client, channel, msg, ts, blocks=blocks)
             return None
     return "table_id not found"
+
+
+def login(web_client: slack.WebClient, channel: str, user: str):
+    err = gameManager.login(user)
+    if err is None:
+        send_msg(web_client, channel, "login successfully", user)
+    else:
+        send_msg(web_client, channel, err)
+
+
+def get_chip(web_client: slack.WebClient, channel: str, user: str):
+    err = gameManager.get_chip(user)
+    if err is None:
+        send_msg(web_client, channel, "get 500 chips", user)
+    else:
+        send_msg(web_client, channel, err)
+
+
+def mychip(web_client: slack.WebClient, channel: str, user: str):
+    err = gameManager.show_chip(user)
+    send_msg(web_client, channel, err, user)

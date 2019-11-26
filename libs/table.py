@@ -2,14 +2,13 @@ import time
 import threading as thread
 import uuid
 from typing import List, Dict
-
-
 import libs.game as lgame
 import bots.game as bgame
 from slackapi.payload import get_mentioned_string, build_payload, build_info_str
 from .poker_bot import PokerBot
 from .player import Player
 import logging
+from .storage import Storage
 
 MAX_AWAIT = 600
 INITIAL_CHIPS = 500
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class Table:
-    def __init__(self, owner: str):
+    def __init__(self, owner: str, persistent: bool, storage: Storage):
         self.uid = str(uuid.uuid4())
         self.game = lgame.Game()
         self.owner = owner
@@ -34,13 +33,20 @@ class Table:
         self.counter = 0  # number of games
         self.timer_thread = thread.Thread(target=self.timer_function)
         self.poker_bots: Dict[str, PokerBot] = {}
+        self.persistent = persistent
+        self.storage = storage
 
-    def join(self, user_id):
+    def join(self, user_id, is_bot: bool = False):
         """Join a table, return (pos, nplayer, err)"""
         if user_id in list(map(lambda player: player.user, self.players)):
             return -1, -1, "already in this table"
         pos = len(self.players)
         player = Player(user_id)
+        if self.persistent and not is_bot:
+            player.chip = self.storage.transfer_user_chip_to_table(player.user, INITIAL_CHIPS, self.uid)
+            if player.chip == 0:
+                return -1, -1, "no money, fuck"
+
         self.players.append(player)
         self.players_user2pos[player.user] = pos
         return pos, pos + 1, None
@@ -50,7 +56,10 @@ class Table:
         if user_id not in list(map(lambda player: player.user, self.players)):
             return -1, "is not in this table"
         player_pos = self.players_user2pos[user_id]
-        self.players.remove(self.players[player_pos])
+        player = self.players[player_pos]
+        if self.persistent:
+            self.storage.leave_table(player.user, self.uid, player.chip)
+        self.players.remove(player)
         # update self.players_user2pos
         self.players_user2pos.clear()
         for pos, player in enumerate(self.players):
@@ -82,7 +91,7 @@ class Table:
 
     def add_bot_player(self):
         bot_id = f"bot_player_{len(self.poker_bots)}"
-        pos, tot, err = self.join(bot_id)
+        pos, tot, err = self.join(bot_id, True)
         if tot <= 0 or err is not None:
             return err
         self.poker_bots[bot_id] = PokerBot(self.uid)
@@ -226,3 +235,4 @@ class Table:
             info_str += f"can_check {self.game.is_check_permitted(pos)}, active {player.active}, status {player.status.name}, "
             info_str += f"rank {player.rank}, hand {player.hand}\n"
         return info_str
+
