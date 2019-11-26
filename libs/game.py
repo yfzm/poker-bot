@@ -6,6 +6,8 @@ import random
 from typing import List, Dict
 from .player import Player
 import threading
+import logging
+import uuid
 
 
 class GameStatus(IntEnum):
@@ -83,6 +85,8 @@ class Game(object):
         self.result = Result()
         self.lock = threading.RLock()
         self.actions: Dict[str, Action] = dict()
+        self.id = uuid.uuid4()
+        self.logger = logging.getLogger(__name__)
 
     def init_game(self, players: List[Player], ante: int, btn: int):
         self.players = players
@@ -148,11 +152,14 @@ class Game(object):
         return new_pos if new_pos != pos else -1
 
     def invoke_next_player(self):
+        self.logger.debug("%s: invoke next player", self.id)
         if self.get_active_player_num() == 1:
+            self.logger.debug("%s: invoke next player, player_num == 1, go to end", self.id)
             self.end()
             return
 
         r = self.find_next_active_player(self.exe_pos)
+        self.logger.debug("%s: invoke next player, next pos %d", self.id, r)
         if r == -1:
             # all-in case
             self.pub_cards += [self.deck.get_card()
@@ -160,6 +167,9 @@ class Game(object):
             self.end()
             return
 
+        self.logger.debug("%s: invoke next player, next round %d", self.id, self.next_round)
+
+        self.exe_pos = r
         if r == self.next_round:
             # enter next phase
             self.round_status = RoundStatus(self.round_status.value + 1)
@@ -176,9 +186,9 @@ class Game(object):
                 self.actions[player.user].set_disabled()
             self.exe_pos = self.sb
             self.next_round = self.sb
-            return
-
-        self.exe_pos = r
+        # fold or allin at beginning
+        if not self.players[self.next_round].is_playing():
+            self.next_round = self.find_next_active_player(self.next_round)
 
     def flop(self):
         self.pub_cards = [self.deck.get_card() for i in range(3)]
