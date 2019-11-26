@@ -61,7 +61,7 @@ class Table:
         """Start a game, return (hands, err)"""
         # if user_id != self.owner:
         #     return None, "Failed to start, because only the one who open the table can start the game"
-        active_players = list(filter(lambda p: not p.is_leaving, self.players))
+        active_players = list(filter(lambda p: not p.is_leaving(), self.players))
         if len(active_players) < 2:
             return None, "Failed to start, because this game requires at least TWO players"
         for player in active_players:
@@ -81,7 +81,7 @@ class Table:
         return hands, None
 
     def continue_game(self, user_id):
-        self.players = list(filter(lambda p: not p.is_leaving, self.players))
+        self.players = list(filter(lambda p: not p.is_leaving(), self.players))
         # TODO: check if game is running
         self.timer_thread.join()
         self.timer_thread = thread.Thread(target=self.timer_function)
@@ -118,6 +118,7 @@ class Table:
             time.sleep(1)
             self.timeout_counter -= 1
             if self.timeout_counter == 0:
+                logger.info("timeout")
                 self.countdown = MAX_AWAIT
                 self.exe_pos_local = -1
                 self.round_status_local = ""
@@ -202,6 +203,13 @@ class Table:
             bgame.update_msg_by_table_id(
                 self.uid, self.msg_ts, blocks=get_payload())
 
+        if not self.game.players[self.game.exe_pos].is_normal():
+            self.game.pfold(self.game.exe_pos)
+            bgame.send_to_channel_by_table_id(
+                self.uid, f"leaving: {get_mentioned_string(self.players[exe_pos].user)} fold")
+            self.countdown = MAX_AWAIT
+            return False
+
         if round_status == "END":
             logger.debug("%s: mainloop exit", self.uid)
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
@@ -255,7 +263,7 @@ class Table:
         info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].user)}\n"
         info_str += f"next_round: {self.game.next_round} {get_mentioned_string(self.players[self.game.next_round].user)}\n"
         info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}\n"
-        for pos, player in enumerate(self.players):
+        for pos, player in enumerate(self.game.players):
             info_str += f"{get_mentioned_string(player.user)}: chip {player.chip}, \
                         total_bet {player.chip_bet}, cards {player.cards}, "
             info_str += f"can_check {self.game.is_check_permitted(pos)}, "
