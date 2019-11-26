@@ -13,7 +13,7 @@ import logging
 
 MAX_AWAIT = 600
 INITIAL_CHIPS = 500
-BOT_NUM = 3
+TIMEOUT = 600
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,9 @@ class Table:
         self.ante = 20
         self.counter = 0  # number of games
         self.timer_thread = thread.Thread(target=self.timer_function)
+        self.timeout_thread = thread.Thread(target=self.timeout_function)
+        self.timeout_counter = TIMEOUT
+        self.timeout_thread.start()
         self.poker_bots: Dict[str, PokerBot] = {}
 
     def join(self, user_id):
@@ -43,6 +46,7 @@ class Table:
         player = Player(user_id)
         self.players.append(player)
         self.players_user2pos[player.user] = pos
+        self.timeout_counter = TIMEOUT
         return pos, pos + 1, None
 
     def leave(self, user_id):
@@ -63,6 +67,8 @@ class Table:
         for player in active_players:
             player.set_normal()
         self.update_user2pos()
+        self.timeout_counter = -1
+        self.timeout_thread.join()
         self.game.start(active_players, self.ante, self.btn)
         logger.debug("%s: game start successfully", self.uid)
         hands = []
@@ -106,6 +112,24 @@ class Table:
 
         if exe_player.user in self.poker_bots:
             self.poker_bots[exe_player.user].react(game, game.exe_pos)
+
+    def timeout_function(self):
+        while self.timeout_counter > 0:
+            time.sleep(1)
+            self.timeout_counter -= 1
+            if self.timeout_counter == 0:
+                self.countdown = MAX_AWAIT
+                self.exe_pos_local = -1
+                self.round_status_local = ""
+                self.msg_ts = ""
+                self.btn = 0
+                self.ante = 20
+                self.counter = 0  # number of games
+                self.timer_thread = thread.Thread(target=self.timer_function)
+                self.timeout_thread = thread.Thread(target=self.timeout_function)
+                self.timeout_counter = TIMEOUT
+                self.poker_bots: Dict[str, PokerBot] = {}
+                return
 
     def timer_function(self):
         time.sleep(3)
@@ -183,6 +207,8 @@ class Table:
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
             self.game.result.execute()
             self.show_result(self.game.result)
+            self.timeout_thread = thread.Thread(target=self.timeout_function)
+            self.timeout_thread.start()
             return True
 
         self.exe_pos_local = exe_pos
