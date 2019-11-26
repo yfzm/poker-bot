@@ -50,23 +50,23 @@ class Table:
         if user_id not in list(map(lambda player: player.user, self.players)):
             return -1, "is not in this table"
         player_pos = self.players_user2pos[user_id]
-        self.players.remove(self.players[player_pos])
-        # update self.players_user2pos
-        self.players_user2pos.clear()
-        for pos, player in enumerate(self.players):
-            self.players_user2pos[player.user] = pos
-        return len(self.players), None
+        self.players[player_pos].set_leaving()
+        return len(self.players), None  # FIXME: maybe do not return nplayer
 
     def start(self, user_id):
         """Start a game, return (hands, err)"""
         # if user_id != self.owner:
         #     return None, "Failed to start, because only the one who open the table can start the game"
-        if len(self.players) < 2:
+        active_players = list(filter(lambda p: not p.is_leaving, self.players))
+        if len(active_players) < 2:
             return None, "Failed to start, because this game requires at least TWO players"
-        self.game.start(self.players, self.ante, self.btn)
+        for player in active_players:
+            player.set_normal()
+        self.update_user2pos()
+        self.game.start(active_players, self.ante, self.btn)
         logger.debug("%s: game start successfully", self.uid)
         hands = []
-        for pos, player in enumerate(self.players):
+        for pos, player in enumerate(active_players):
             hands.append({
                 "id": player.user,
                 "hand": self.game.get_cards_by_pos(pos)
@@ -75,10 +75,18 @@ class Table:
         return hands, None
 
     def continue_game(self, user_id):
+        self.players = list(filter(lambda p: not p.is_leaving, self.players))
+        # TODO: check if game is running
         self.timer_thread.join()
         self.timer_thread = thread.Thread(target=self.timer_function)
+        # TODO: maybe not always point to the next
         self.btn = (self.btn + 1) % len(self.players)
         return self.start(user_id)
+
+    def update_user2pos(self):
+        self.players_user2pos.clear()
+        for pos, player in enumerate(self.players):
+            self.players_user2pos[player.user] = pos
 
     def add_bot_player(self):
         bot_id = f"bot_player_{len(self.poker_bots)}"
@@ -100,6 +108,7 @@ class Table:
             self.poker_bots[exe_player.user].react(game, game.exe_pos)
 
     def timer_function(self):
+        time.sleep(3)
         while True:
             logger.debug("%s: timer trigger", self.uid)
             starttime = time.time()
@@ -121,7 +130,7 @@ class Table:
             pos = self.game.sb
             active_players = self.players[pos:] + self.players[:pos]
             for player in active_players:
-                if player.active and not player.is_fold():
+                if player.is_normal() and not player.is_fold():
                     action = self.game.actions[player.user]
                     m_action = action.action if action.active else ""
                     m_chip = action.chip if action.active else 0
@@ -223,6 +232,7 @@ class Table:
         for pos, player in enumerate(self.players):
             info_str += f"{get_mentioned_string(player.user)}: chip {player.chip}, \
                         total_bet {player.chip_bet}, cards {player.cards}, "
-            info_str += f"can_check {self.game.is_check_permitted(pos)}, active {player.active}, status {player.status.name}, "
+            info_str += f"can_check {self.game.is_check_permitted(pos)}, "
+            info_str += f"mode {player.mode.name}, status {player.status.name}, "
             info_str += f"rank {player.rank}, hand {player.hand}\n"
         return info_str

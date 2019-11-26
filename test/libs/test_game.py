@@ -10,7 +10,10 @@ class TestGameKernel(unittest.TestCase):
         self.p1 = Player("u1")
         self.p2 = Player("u2")
         self.p3 = Player("u3")
-        self.g.start([self.p1, self.p2, self.p3], 20, 1)
+        self.players = list(filter(lambda p: not p.is_leaving(), [self.p1, self.p2, self.p3]))
+        for player in self.players:
+            player.set_normal()
+        self.g.start(self.players, 20, 1)
 
     def test_fold(self):
         game = self.g
