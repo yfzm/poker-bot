@@ -4,7 +4,7 @@ import uuid
 from typing import List, Dict
 import libs.game as lgame
 import bots.game as bgame
-from slackapi.payload import get_mentioned_string, build_payload, build_info_str
+from slackapi.payload import get_mentioned_string, build_payload, build_info_str, card_to_emoji
 from .poker_bot import PokerBot
 from .player import Player
 import logging
@@ -243,10 +243,18 @@ class Table:
         return False
 
     def show_result(self, result: lgame.Result):
-        for player, chip in result.chip_changes.items():
-            r = "win" if chip >= 0 else "lose"
+        players = self.game.players[self.game.last_aggressive:] + self.game.players[:self.game.last_aggressive]
+        biggest_rank = players[0].rank
+        for player in players:
+            chip = result.chip_changes[player]
+            act = "win" if chip >= 0 else "lose"
+            hand = ""
+            if result.should_show_hand() and player.rank >= biggest_rank:
+                biggest_rank = player.rank
+                hand = f" ({card_to_emoji(str(player.cards[0]))}  {card_to_emoji(str(player.cards[1]))}) "
+
             bgame.send_to_channel_by_table_id(
-                self.uid, f"{get_mentioned_string(player.user)} {r} {abs(chip)}, current chip: {player.chip}\n")
+                self.uid, f"{get_mentioned_string(player.user)}{hand} {act} {abs(chip)}, current chip: {player.chip}\n")
 
     def check(self, user_id) -> str:
         player_pos = self.players_user2pos[user_id]

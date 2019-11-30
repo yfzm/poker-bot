@@ -23,6 +23,12 @@ class RoundStatus(IntEnum):
     END = 4
 
 
+class ResultType(IntEnum):
+    COMPARE = 0
+    ALL_FOLD = 1
+    ALL_IN = 2
+
+
 def status(ss):
     def dec(func):
         @wraps(func)
@@ -39,6 +45,7 @@ def status(ss):
 
 class Result:
     def __init__(self):
+        self.type : ResultType = ResultType.ALL_FOLD
         self.chip_changes: Dict[Player, int] = dict()
 
     def add_result(self, player: Player, chip: int):
@@ -53,6 +60,9 @@ class Result:
     def execute(self):
         for player, chip in self.chip_changes.items():
             player.chip += chip
+    
+    def should_show_hand(self) -> bool:
+        return self.type != ResultType.ALL_FOLD
 
 
 class Action:
@@ -82,6 +92,7 @@ class Game(object):
         self.pub_cards = []
         self.highest_bet = 0
         self.last_round_bet = 0
+        self.last_aggressive = 0
         self.result = Result()
         self.lock = threading.RLock()
         self.actions: Dict[str, Action] = dict()
@@ -103,6 +114,7 @@ class Game(object):
         self.pub_cards = []
         self.highest_bet = 0
         self.last_round_bet = 0
+        self.last_aggressive = 0
         self.result = Result()
         self.total_pot = 0
 
@@ -189,6 +201,7 @@ class Game(object):
                 self.actions[player.user].set_disabled()
             self.exe_pos = self.sb
             self.next_round = self.sb
+            self.last_aggressive = self.sb
         # fold or allin at beginning
         if not self.players[self.next_round].is_playing():
             self.next_round = self.find_next_active_player(self.next_round)
@@ -226,6 +239,7 @@ class Game(object):
         # Initialize self.result
         for player in self.players:
             self.result.add_result(player, 0)
+        self.result.type = ResultType.ALL_FOLD
 
         active_players: List[Player] = list(
             filter(lambda p: p.is_normal() and not p.is_fold(), self.players))
@@ -234,10 +248,13 @@ class Game(object):
 
         # Only when there are more than two active players, comparision is needed
         if len(active_players) >= 2:
+            self.result.type = ResultType.ALL_IN
             for p in active_players:
                 hand, rank = poker7(
                     list(map(lambda card: str(card), p.cards + self.pub_cards)))
                 p.set_rank_and_hand(rank, hand)
+                if not p.is_allin():
+                    self.result.type = ResultType.COMPARE
             active_players.sort(key=lambda p: p.chip_bet, reverse=False)
             active_players.sort(key=lambda p: p.rank, reverse=True)
 
@@ -315,6 +332,7 @@ class Game(object):
         self.actions[self.players[pos].user] = Action(
             "raise", self.players[pos].chip_bet - self.last_round_bet)
         self.highest_bet = self.players[pos].chip_bet
+        self.last_aggressive = pos
         self.invoke_next_player()
         return 0
 
@@ -327,6 +345,7 @@ class Game(object):
         if self.players[pos].chip > self.highest_bet:
             self.highest_bet = self.players[pos].chip
             self.next_round = self.exe_pos
+            self.last_aggressive = pos
         self.put_chip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
         self.actions[self.players[pos].user] = Action(
             "all-in", self.players[pos].chip_bet - self.last_round_bet)
