@@ -11,14 +11,15 @@ import logging
 from .storage import Storage
 
 MAX_AWAIT = 600
-INITIAL_CHIPS = 500
+INITIAL_CHIPS = 1000
+INITIAL_TABLE_CHIPS = 200
 TIMEOUT = 600
 
 logger = logging.getLogger(__name__)
 
 
 class Table:
-    def __init__(self, owner: str, persistent: bool, storage: Storage):
+    def __init__(self, owner: str, storage: Storage):
         self.uid = str(uuid.uuid4())
         self.game = lgame.Game()
         self.owner = owner
@@ -36,24 +37,34 @@ class Table:
         self.timeout_counter = TIMEOUT
         self.timeout_thread.start()
         self.poker_bots: Dict[str, PokerBot] = {}
-        self.persistent = persistent
         self.storage = storage
 
     def join(self, user_id, is_bot: bool = False):
-        """Join a table, return (pos, nplayer, err)"""
+        """Join a table, return (pos, total_chip, table_chip, err)"""
         if user_id in list(map(lambda player: player.user, self.players)):
-            return -1, -1, "already in this table"
+            return -1, -1, -1, "already in this table"
+
+        chip, err = self.storage.fetch_user_chip(user_id)
+        if err is not None:
+            self.storage.create_user(user_id, INITIAL_CHIPS)
+            chip = INITIAL_CHIPS
+
+        if is_bot:
+            self.storage.change_user_chip(user_id, INITIAL_CHIPS)
+
         pos = len(self.players)
-        player = Player(user_id)
-        if self.persistent and not is_bot:
-            player.chip = self.storage.transfer_user_chip_to_table(player.user, INITIAL_CHIPS, self.uid)
-            if player.chip == 0:
-                return -1, -1, "no money, fuck"
+        player = Player(user_id, chip)
+
+        player.chip, err = self.storage.transfer_user_chip_to_table(player.user, INITIAL_TABLE_CHIPS, self.uid)
+        if err is not None:
+            return -1, -1, -1, err
+        if player.chip == 0:
+            return -1, -1, -1, "no money, fuck"
 
         self.players.append(player)
         self.players_user2pos[player.user] = pos
         self.timeout_counter = TIMEOUT
-        return pos, pos + 1, None
+        return pos, chip, player.chip, None
 
     def leave(self, user_id):
         """Leave a table, return (nplayer, err)"""
@@ -61,8 +72,7 @@ class Table:
             return -1, "is not in this table"
         player_pos = self.players_user2pos[user_id]
         player = self.players[player_pos]
-        if self.persistent:
-            self.storage.leave_table(player.user, self.uid, player.chip)
+        self.storage.leave_table(player.user, self.uid, player.chip)
         self.players[player_pos].set_leaving()
         return len(self.players), None  # FIXME: maybe do not return nplayer
 
@@ -105,11 +115,11 @@ class Table:
 
     def add_bot_player(self):
         bot_id = f"bot_player_{len(self.poker_bots)}"
-        pos, tot, err = self.join(bot_id, True)
-        if tot <= 0 or err is not None:
+        pos, _, table_chips, err = self.join(bot_id, True)
+        if err is not None:
             return err
         self.poker_bots[bot_id] = PokerBot(self.uid)
-        bgame.send_to_channel_by_table_id(self.uid, f"{bot_id} has joined")
+        bgame.send_to_channel_by_table_id(self.uid, f"{bot_id} has joined at pos {pos} with ${table_chips}")
         return None
 
     def bot_function(self):

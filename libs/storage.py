@@ -73,19 +73,33 @@ class Storage(object):
             cursor.execute("""COMMIT""")
             cursor.close()
 
-    def show_user_chip(self, userid):
+    def fetch_user_chip(self, userid) -> (int, str):
+        """Given userid, return (chips, err)"""
         try:
-            return self.conn.execute("""SELECT chips FROM user WHERE user.userid = ?""", (userid,)).fetchone()[0]
+            return self.conn.execute("""SELECT chips FROM user WHERE user.userid = ?""", (userid,)).fetchone()[0], None
         except Exception:
-            return 0
+            return 0, "user not exist"
 
-    def transfer_user_chip_to_table(self, userid: str, maxChip: int, tableid: str):
+    def transfer_user_chip_to_table(self, userid: str, max_chip: int, tableid: str) -> (int, int, str):
+        """Transfer user chip to a specific table
+
+        Args:
+            userid (str): target user
+            max_chip (int): expected chips to pay for entering the table
+            tableid (str): table id
+
+        Returns:
+            actual_paid (int): the chips that the user actually paid
+            err (str): None for success
+        """
         cursor = self.conn.cursor()
         cursor.execute("""BEGIN""")
         chip_used = 0
         try:
-            chips = self.show_user_chip(userid)
-            chip_used = min(chips, maxChip)
+            chips, err = self.fetch_user_chip(userid)
+            if err is not None:
+                return 0, err
+            chip_used = min(chips, max_chip)
             cursor.execute(
                 """UPDATE user
                 SET chips = ?
@@ -102,12 +116,14 @@ class Storage(object):
         finally:
             cursor.execute("""COMMIT""")
             cursor.close()
-        return chip_used
+        return chip_used, None
 
-    def change_user_chip(self, userid: str, chips: int):
+    def change_user_chip(self, userid: str, chips: int) -> str:
         cursor = self.conn.cursor()
         cursor.execute("""BEGIN""")
-        pre_chips = self.show_user_chip(userid)
+        pre_chips, err = self.fetch_user_chip(userid)
+        if err is not None:
+            return err
         cursor.execute(
             """UPDATE user
             SET chips = ?
@@ -121,7 +137,9 @@ class Storage(object):
         cursor = self.conn.cursor()
         cursor.execute("""BEGIN""")
         try:
-            current_chips = self.show_user_chip(userid)
+            current_chips, err = self.fetch_user_chip(userid)
+            if err is not None:
+                return err
             cursor.execute(
                 """UPDATE user
                 SET chips = ?
@@ -144,13 +162,13 @@ class Storage(object):
 
 if __name__ == '__main__':
     s = Storage('test')
-    s.createUser('test', 200)
-    print(s.show_user_chip('test'))
+    s.create_user('test', 200)
+    print(s.fetch_user_chip('test'))
     t = s.transfer_user_chip_to_table('test', 50, 'table')
-    print(s.show_user_chip('test'))
+    print(s.fetch_user_chip('test'))
     s.leave_table('test', 'table', 20)
-    print(s.show_user_chip('test'))
+    print(s.fetch_user_chip('test'))
 
-    print(s.show_user_chip('testttt'))
+    print(s.fetch_user_chip('testttt'))
     t = s.transfer_user_chip_to_table('testttt', 50, 'table')
     print(t)
