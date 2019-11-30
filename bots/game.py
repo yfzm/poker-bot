@@ -28,8 +28,6 @@ class ChannelInfo:
 def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str, text: str, mentioned: bool):
     if text == "open":
         create_table(web_client, channel, user)
-    elif text == "opens":
-        create_table(web_client, channel, user, True)
     elif text == "join":
         join_table(web_client, channel, user)
     elif text == "start":
@@ -53,12 +51,10 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
         echo_info(web_client, channel)
     elif text == "bot":
         add_bot(web_client, channel)
-    elif text == "login":
-        login(web_client, channel, user)
-    elif text == "getchip":
-        get_chip(web_client, channel, user)
-    elif text == "mychip":
-        mychip(web_client, channel, user)
+    elif text == "make me rich":
+        gain_chip(web_client, channel, user)
+    elif text == "chip":
+        show_chip(web_client, channel, user)
     else:
         if mentioned:
             send_msg(web_client, channel, HELP_MSG, user)
@@ -67,18 +63,17 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
 channels: Dict[str, ChannelInfo] = dict()
 
 
-def create_table(web_client: slack.WebClient, channel: str, user: str, persistent: bool = False):
+def create_table(web_client: slack.WebClient, channel: str, user: str):
     if channel in channels.keys():
         send_msg(web_client, channel,
                  "Failed to open a game, because there is an unfinished game in this channel!")
         return
 
-    table_id = gameManager.open(user, persistent)
+    table_id = gameManager.open(user)
     channels[channel] = ChannelInfo(table_id, web_client)
     send_msg(web_client, channel,
              "Successfully opened a game! Everyone is free to join the table.")
-    send_msg(web_client, channel,
-             f"is the table owner and just sat at position 0", user)
+    join_table(web_client, channel, user)
 
 
 def join_table(web_client: slack.WebClient, channel: str, user: str):
@@ -89,17 +84,19 @@ def join_table(web_client: slack.WebClient, channel: str, user: str):
         return
     table_id = channels[channel].table_id
 
-    pos, nplayer, err = gameManager.join(table_id, user)
+    pos, total_chip, table_chip, err = gameManager.join(table_id, user)
     if err is not None:
         send_msg(web_client, channel, err)
         return
 
     send_msg(web_client, channel,
-             f"just joined at position {pos}, total player: {nplayer}", user)
+             f"just joined at position {pos}, total player: {pos + 1}", user)
 
-    if nplayer == 2:
+    if pos + 1 == 2:
         send_msg(web_client, channel,
                  'Now you can start a game by replying "start" or wait for more player to join in.')
+
+    send_private_msg_in_channel(web_client, channel, user, f"you have ${total_chip}, and spend ${table_chip} to join the table")
 
 
 def leave_table(web_client: slack.WebClient, channel: str, user: str):
@@ -225,22 +222,17 @@ def update_msg_by_table_id(table_id, ts, msg="void", blocks=None):
     return "table_id not found"
 
 
-def login(web_client: slack.WebClient, channel: str, user: str):
-    err = gameManager.login(user)
+def gain_chip(web_client: slack.WebClient, channel: str, user: str):
+    err = gameManager.gain_chip(user)
     if err is None:
-        send_msg(web_client, channel, "login successfully", user)
+        send_msg(web_client, channel, ", you get $500!", user)
     else:
-        send_msg(web_client, channel, err)
+        send_msg(web_client, channel, err, user)
 
 
-def get_chip(web_client: slack.WebClient, channel: str, user: str):
-    err = gameManager.get_chip(user)
+def show_chip(web_client: slack.WebClient, channel: str, user: str):
+    chip, err = gameManager.show_chip(user)
     if err is None:
-        send_msg(web_client, channel, "get 500 chips", user)
+        send_msg(web_client, channel, f", you have ${chip}", user)
     else:
-        send_msg(web_client, channel, err)
-
-
-def mychip(web_client: slack.WebClient, channel: str, user: str):
-    err = gameManager.show_chip(user)
-    send_msg(web_client, channel, err, user)
+        send_msg(web_client, channel, err, user)

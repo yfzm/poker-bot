@@ -1,9 +1,6 @@
 from enum import Enum
 
 
-INITIAL_CHIPS = 500
-
-
 class PlayerStatus(Enum):
     PLAYING = 0
     FOLD = 1
@@ -17,9 +14,9 @@ class PlayerMode(Enum):
 
 
 class Player:
-    def __init__(self, user: str):
+    def __init__(self, user: str, chip: int):
         self.user = user
-        self.chip = INITIAL_CHIPS
+        self.chip = chip
         self.mode = PlayerMode.ENTERING
         self.init()
 

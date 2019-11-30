@@ -20,20 +20,19 @@ class GameManager:
         print("gamemanager")
         self.logger = logging.getLogger(__name__)
         self.tables: Dict[str, Table] = dict()
-        self.storage = Storage('PokerGame')
+        self.storage = Storage('PokerGame.dat')
 
     def init_status(self):
         pass
 
     # TODO: need to protect through lock
-    def open(self, user_id: str, persistent: bool):
-        table = Table(user_id, persistent, self.storage)
+    def open(self, user_id: str):
+        table = Table(user_id, self.storage)
         self.tables[table.uid] = table
-        self.join(table.uid, user_id)  # Error handling?
         return table.uid
 
     def join(self, table_id, user_id):
-        """Join a table, return (pos, nplayer, err)"""
+        """Join a table, return (pos, total_chip, table_chip, err)"""
         table = self.tables[table_id]
         return table.join(user_id)
 
@@ -84,13 +83,15 @@ class GameManager:
         self.storage.create_user(user_id, 500)
         return None
 
-    def get_chip(self, user_id) -> str:
-        self.storage.change_user_chip(user_id, 500)
-        return None
+    def gain_chip(self, user_id) -> str:
+        err = self.storage.change_user_chip(user_id, 500)
+        return err
 
-    def show_chip(self, user_id) -> str:
-        chips = self.storage.show_user_chip(user_id)
-        return str(chips)
+    def show_chip(self, user_id) -> (int, str):
+        chips, err = self.storage.fetch_user_chip(user_id)
+        if err is not None:
+            return 0, err
+        return chips, None
 
 
 gameManager = GameManager()
