@@ -34,7 +34,8 @@ def card_to_emoji(card: str) -> str:
     return f"{kind}*{num}*"
 
 
-def build_info_str(username: str, name_len: int, remainning_chip: int, action: str, chip: int, is_waiting: bool, countdown: int) -> str:
+def build_info_str(username: str, name_len: int, remainning_chip: int, action: str,
+                   chip: int, is_waiting: bool, countdown: int) -> str:
     """Build a string to explain action of a user
 
     Args:

@@ -10,9 +10,9 @@ class TestGameKernel(unittest.TestCase):
 
     def setUp(self):
         self.g = Game()
-        self.p1 = Player("u1", INITIAL_CHIPS)
-        self.p2 = Player("u2", INITIAL_CHIPS)
-        self.p3 = Player("u3", INITIAL_CHIPS)
+        self.p1 = Player("u1", "player1", INITIAL_CHIPS)
+        self.p2 = Player("u2", "player2", INITIAL_CHIPS)
+        self.p3 = Player("u3", "player3", INITIAL_CHIPS)
         self.players = list(filter(lambda p: not p.is_leaving(), [self.p1, self.p2, self.p3]))
         for player in self.players:
             player.set_normal()
