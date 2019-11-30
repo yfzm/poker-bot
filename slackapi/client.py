@@ -47,6 +47,17 @@ def update_msg(web_client: slack.WebClient, channel: str, msg: str, ts: str, use
         web_client.chat_update(channel=channel, ts=ts, blocks=blocks)
 
 
+def delete_msg(web_client: slack.WebClient, channel: str, ts: str):
+    """Delete a message
+
+    Args:
+        web_client (slack.WebClient): web client object
+        channel (str): The channel id. e.g. 'C1234567890'
+        ts (str): The timestamp of the old message
+    """
+    web_client.chat_delete(channel=channel, ts=ts)
+
+
 def send_private_msg_in_channel(web_client: slack.WebClient, channel: str, user: str, msg: str, blocks=None):
     """Sends an ephemeral message to a user in a channel.
 
