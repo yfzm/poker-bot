@@ -1,7 +1,7 @@
 import slack
 import re
 from libs.manager import gameManager
-from slackapi.client import send_msg, send_private_msg_in_channel, update_msg
+from slackapi.client import send_msg, send_private_msg_in_channel, update_msg, delete_msg
 from slackapi.payload import card_to_emoji
 from typing import Dict
 
@@ -219,6 +219,14 @@ def update_msg_by_table_id(table_id, ts, msg="void", blocks=None):
     for (channel, info) in channels.items():
         if info.table_id == table_id:
             update_msg(info.client, channel, msg, ts, blocks=blocks)
+            return None
+    return "table_id not found"
+
+
+def delete_msg_by_table_id(table_id, ts):
+    for (channel, info) in channels.items():
+        if info.table_id == table_id:
+            delete_msg(info.client, channel, ts)
             return None
     return "table_id not found"
 
