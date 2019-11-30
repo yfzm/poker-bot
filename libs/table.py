@@ -194,25 +194,20 @@ class Table:
             self.countdown = MAX_AWAIT
             return False
 
-        if self.round_status_local != round_status:
-            logger.debug("%s: mainloop next status", self.uid)
+        if self.round_status_local != round_status or exe_pos != self.exe_pos_local:
+            logger.debug("%s: mainloop next status or next exe_pos", self.uid)
             # the game has changed to the next status, while local status is behind
             # so, we should print some message
             self.round_status_local = round_status
             self.countdown = MAX_AWAIT
             # if exe_pos == self.exe_pos_local:
+            old_ts = self.msg_ts
             self.msg_ts, err = bgame.send_to_channel_by_table_id(
                 self.uid, blocks=get_payload())
             if err is not None:
                 raise RuntimeError  # TODO: fix later
-
-        elif exe_pos != self.exe_pos_local:
-            logger.debug("%s: mainloop next exe_pos, pre: %d, now: %d", self.uid, self.exe_pos_local, exe_pos)
-            # the game stage is not changed, but the current active player is changed
-            # we also should print some message
-            self.countdown = MAX_AWAIT
-            self.msg_ts, err = bgame.send_to_channel_by_table_id(
-                self.uid, blocks=get_payload())
+            if old_ts != "":
+                bgame.delete_msg_by_table_id(self.uid, old_ts)
 
         else:
             logger.debug("%s: mainloop decrease countdown %d", self.uid, self.countdown)
