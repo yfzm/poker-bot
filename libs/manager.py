@@ -31,10 +31,10 @@ class GameManager:
         self.tables[table.uid] = table
         return table.uid
 
-    def join(self, table_id, user_id):
+    def join(self, table_id, user_id, username):
         """Join a table, return (pos, total_chip, table_chip, err)"""
         table = self.tables[table_id]
-        return table.join(user_id)
+        return table.join(user_id, username)
 
     def leave(self, table_id, user_id):
         """Leave a table, return (nplayer, err)"""

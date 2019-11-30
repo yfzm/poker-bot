@@ -34,7 +34,7 @@ def card_to_emoji(card: str) -> str:
     return f"{kind}*{num}*"
 
 
-def build_info_str(user: str, remainning_chip: int, action: str, chip: int, is_waiting: bool, countdown: int) -> str:
+def build_info_str(username: str, name_len: int, remainning_chip: int, action: str, chip: int, is_waiting: bool, countdown: int) -> str:
     """Build a string to explain action of a user
 
     Args:
@@ -55,11 +55,11 @@ def build_info_str(user: str, remainning_chip: int, action: str, chip: int, is_w
     Return:
         info_str (str): a string to explain action of a user
     """
-    info = f"<@{user}> (${remainning_chip})  {action} "
+    info = f"{username:{name_len}} (${remainning_chip:<4}) {action}"
     if action in ("bet", "raise", "all-in"):
-        info += f"${chip}    "
+        info += f" ${chip}    "
     if is_waiting:
-        info += f":clock12: {countdown}s"
+        info += f"waiting... {countdown}s"
     return info
 
 
@@ -81,9 +81,6 @@ def build_payload(pub_cards: List[str], pot: int, ante: int, btn_userid: str, in
                         "text": card_str
                     }
         })
-        ret.append({
-            "type": "divider"
-        })
 
     ret.append({
         "type": "section",
@@ -92,13 +89,11 @@ def build_payload(pub_cards: List[str], pot: int, ante: int, btn_userid: str, in
             "text": f"*total pot: ${pot}\t\tlevel: ${ante // 2}/${ante}\t\tbtn: <@{btn_userid}>*"
         }
     })
-    ret.append({
-        "type": "divider"
-    })
 
-    info_str = ""
+    info_str = "```"
     for info in infos:
         info_str += info + "\n"
+    info_str += "```"
     ret.append({
         "type": "section",
                 "text": {

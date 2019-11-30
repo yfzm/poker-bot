@@ -1,7 +1,7 @@
 import slack
 import re
 from libs.manager import gameManager
-from slackapi.client import send_msg, send_private_msg_in_channel, update_msg, delete_msg
+from slackapi.client import send_msg, send_private_msg_in_channel, update_msg, delete_msg, get_username
 from slackapi.payload import card_to_emoji
 from typing import Dict
 
@@ -26,10 +26,16 @@ class ChannelInfo:
 
 
 def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str, text: str, mentioned: bool):
-    if text == "open":
-        create_table(web_client, channel, user)
-    elif text == "join":
-        join_table(web_client, channel, user)
+    def _get_username(s: str) -> str:
+        if len(s.split()) == 2:
+            return s.split()[1]
+        else:
+            return get_username(web_client, user)
+
+    if text.startswith("open"):
+        create_table(web_client, channel, user, _get_username(text))
+    elif text.startswith("join"):
+        join_table(web_client, channel, user, _get_username(text))
     elif text == "start":
         start_game(web_client, channel, user, is_new=True)
     elif re.search(r"^bet(\s)+(\d)+$", text) is not None:
@@ -63,7 +69,7 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
 channels: Dict[str, ChannelInfo] = dict()
 
 
-def create_table(web_client: slack.WebClient, channel: str, user: str):
+def create_table(web_client: slack.WebClient, channel: str, user: str, username: str):
     if channel in channels.keys():
         send_msg(web_client, channel,
                  "Failed to open a game, because there is an unfinished game in this channel!")
@@ -73,10 +79,10 @@ def create_table(web_client: slack.WebClient, channel: str, user: str):
     channels[channel] = ChannelInfo(table_id, web_client)
     send_msg(web_client, channel,
              "Successfully opened a game! Everyone is free to join the table.")
-    join_table(web_client, channel, user)
+    join_table(web_client, channel, user, username)
 
 
-def join_table(web_client: slack.WebClient, channel: str, user: str):
+def join_table(web_client: slack.WebClient, channel: str, user: str, username: str):
     # TODO: use wrapper to check channel
     if channel not in channels.keys():
         send_msg(web_client, channel,
@@ -84,7 +90,7 @@ def join_table(web_client: slack.WebClient, channel: str, user: str):
         return
     table_id = channels[channel].table_id
 
-    pos, total_chip, table_chip, err = gameManager.join(table_id, user)
+    pos, total_chip, table_chip, err = gameManager.join(table_id, user, username)
     if err is not None:
         send_msg(web_client, channel, err)
         return

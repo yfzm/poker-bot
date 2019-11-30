@@ -14,8 +14,9 @@ class PlayerMode(Enum):
 
 
 class Player:
-    def __init__(self, user: str, chip: int):
-        self.user = user
+    def __init__(self, userid: str, username: str, chip: int):
+        self.userid = userid
+        self.username = username
         self.chip = chip
         self.mode = PlayerMode.ENTERING
         self.init()

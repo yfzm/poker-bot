@@ -104,7 +104,7 @@ class Game(object):
         self.actions.clear()
         for player in self.players:
             player.init()
-            self.actions[player.user] = Action("", 0, False)
+            self.actions[player.userid] = Action("", 0, False)
         self.round_status = RoundStatus.PREFLOP
         self.nplayers = len(self.players)
         self.deck = Deck()
@@ -198,7 +198,7 @@ class Game(object):
             elif self.round_status == RoundStatus.END:
                 self.end()
             for player in self.players:
-                self.actions[player.user].set_disabled()
+                self.actions[player.userid].set_disabled()
             self.exe_pos = self.sb
             self.next_round = self.sb
             self.last_aggressive = self.sb
@@ -299,7 +299,7 @@ class Game(object):
     def pcall(self, pos):
         if pos != self.exe_pos or self.put_chip(pos, self.highest_bet - self.players[pos].chip_bet, 'CALL') < 0:
             return -1
-        self.actions[self.players[pos].user] = Action(
+        self.actions[self.players[pos].userid] = Action(
             "call", self.players[pos].chip_bet - self.last_round_bet)
         self.invoke_next_player()
         return 0
@@ -309,7 +309,7 @@ class Game(object):
         if pos != self.exe_pos:
             return -1
         self.players[pos].set_fold()
-        self.actions[self.players[pos].user] = Action("fold", 0)
+        self.actions[self.players[pos].userid] = Action("fold", 0)
         self.invoke_next_player()
         return 0
 
@@ -317,7 +317,7 @@ class Game(object):
     def pcheck(self, pos):
         if pos != self.exe_pos or not self.is_check_permitted(pos):
             return -1
-        self.actions[self.players[pos].user] = Action("check", 0)
+        self.actions[self.players[pos].userid] = Action("check", 0)
         self.invoke_next_player()
         return 0
 
@@ -329,7 +329,7 @@ class Game(object):
 
         self.next_round = self.exe_pos
         self.put_chip(pos, num, 'RAISE')
-        self.actions[self.players[pos].user] = Action(
+        self.actions[self.players[pos].userid] = Action(
             "raise", self.players[pos].chip_bet - self.last_round_bet)
         self.highest_bet = self.players[pos].chip_bet
         self.last_aggressive = pos
@@ -347,7 +347,7 @@ class Game(object):
             self.next_round = self.exe_pos
             self.last_aggressive = pos
         self.put_chip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
-        self.actions[self.players[pos].user] = Action(
+        self.actions[self.players[pos].userid] = Action(
             "all-in", self.players[pos].chip_bet - self.last_round_bet)
         self.invoke_next_player()
         return 0
