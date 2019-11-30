@@ -45,7 +45,7 @@ def status(ss):
 
 class Result:
     def __init__(self):
-        self.type : ResultType = ResultType.ALL_FOLD
+        self.type: ResultType = ResultType.ALL_FOLD
         self.chip_changes: Dict[Player, int] = dict()
 
     def add_result(self, player: Player, chip: int):
@@ -60,7 +60,7 @@ class Result:
     def execute(self):
         for player, chip in self.chip_changes.items():
             player.chip += chip
-    
+
     def should_show_hand(self) -> bool:
         return self.type != ResultType.ALL_FOLD
 
