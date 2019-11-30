@@ -96,7 +96,8 @@ def join_table(web_client: slack.WebClient, channel: str, user: str):
         send_msg(web_client, channel,
                  'Now you can start a game by replying "start" or wait for more player to join in.')
 
-    send_private_msg_in_channel(web_client, channel, user, f"you have ${total_chip}, and spend ${table_chip} to join the table")
+    send_private_msg_in_channel(
+        web_client, channel, user, f"you have ${total_chip}, and spend ${table_chip} to join the table")
 
 
 def leave_table(web_client: slack.WebClient, channel: str, user: str):

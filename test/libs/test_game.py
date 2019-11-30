@@ -3,13 +3,16 @@ from libs.game import Game, GameStatus, RoundStatus
 from libs.player import Player
 
 
+INITIAL_CHIPS = 500
+
+
 class TestGameKernel(unittest.TestCase):
 
     def setUp(self):
         self.g = Game()
-        self.p1 = Player("u1")
-        self.p2 = Player("u2")
-        self.p3 = Player("u3")
+        self.p1 = Player("u1", INITIAL_CHIPS)
+        self.p2 = Player("u2", INITIAL_CHIPS)
+        self.p3 = Player("u3", INITIAL_CHIPS)
         self.players = list(filter(lambda p: not p.is_leaving(), [self.p1, self.p2, self.p3]))
         for player in self.players:
             player.set_normal()

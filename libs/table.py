@@ -43,15 +43,15 @@ class Table:
         """Join a table, return (pos, total_chip, table_chip, err)"""
         if user_id in list(map(lambda player: player.user, self.players)):
             return -1, -1, -1, "already in this table"
-        
+
         chip, err = self.storage.fetch_user_chip(user_id)
         if err is not None:
             self.storage.create_user(user_id, INITIAL_CHIPS)
             chip = INITIAL_CHIPS
-        
+
         if is_bot:
             self.storage.change_user_chip(user_id, INITIAL_CHIPS)
-        
+
         pos = len(self.players)
         player = Player(user_id, chip)
 
