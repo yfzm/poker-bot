@@ -67,7 +67,7 @@ def build_info_str(username: str, name_len: int, remaining_chip: int, action: st
     return info
 
 
-def build_payload(pub_cards: List[str], pot: int, ante: int, btn_userid: str, infos: List[str]) -> List[object]:
+def build_payload(pub_cards: List[str], pot: int, ante: int, btn_username: str, infos: List[str]) -> List[object]:
     ret = []
 
     ret.append({
@@ -90,7 +90,7 @@ def build_payload(pub_cards: List[str], pot: int, ante: int, btn_userid: str, in
         "type": "section",
         "text": {
             "type": "mrkdwn",
-            "text": f"*total pot: ${pot}\t\tlevel: ${ante // 2}/${ante}\t\tbtn: <@{btn_userid}>*"
+            "text": f"*total pot: ${pot}\t\tlevel: ${ante // 2}/${ante}\t\tbtn: {btn_username}*"
         }
     })
 

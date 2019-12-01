@@ -127,6 +127,11 @@ class Table:
 
     def bot_function(self):
         game = self.game
+
+        if game.get_round_status_name() == "END":
+            logger.debug("bot_function: game end, exit")
+            return
+
         exe_player = game.players[game.exe_pos]
 
         logger.debug("bot_function: pos: %d", game.exe_pos)
@@ -172,6 +177,15 @@ class Table:
         round_status = self.game.get_round_status_name()
         exe_pos = self.game.exe_pos
 
+        if round_status == "END":
+            logger.debug("%s: mainloop exit", self.uid)
+            bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
+            self.game.result.execute()
+            self.show_result(self.game.result)
+            self.timeout_thread = thread.Thread(target=self.timeout_function)
+            self.timeout_thread.start()
+            return True
+
         def get_payload():
             info_list = []
             pos = self.game.sb
@@ -185,7 +199,7 @@ class Table:
                         player.username, self.max_name_len, player.get_remaining_chip(), m_action, m_chip,
                         self.players_user2pos[player.userid] == exe_pos, self.countdown))
             return build_payload(self.game.pub_cards, self.game.total_pot, self.game.ante,
-                                 self.players[self.game.btn].userid, info_list)
+                                 self.players[self.game.btn].username, info_list)
 
         logger.debug("%s: mainloop", self.uid)
         if self.countdown == 0:
@@ -193,7 +207,7 @@ class Table:
             # TODO: prefer check over fold
             self.game.pfold(exe_pos)
             bgame.send_to_channel_by_table_id(
-                self.uid, f"timeout: {get_mentioned_string(self.players[exe_pos].userid)} fold")
+                self.uid, f"timeout: {self.players[exe_pos].username} fold")
             self.countdown = MAX_AWAIT
             return False
 
@@ -228,18 +242,9 @@ class Table:
         if not self.game.players[self.game.exe_pos].is_normal():
             self.game.pfold(self.game.exe_pos)
             bgame.send_to_channel_by_table_id(
-                self.uid, f"leaving: {get_mentioned_string(self.players[exe_pos].userid)} fold")
+                self.uid, f"leaving: {self.players[exe_pos].username} fold")
             self.countdown = MAX_AWAIT
             return False
-
-        if round_status == "END":
-            logger.debug("%s: mainloop exit", self.uid)
-            bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
-            self.game.result.execute()
-            self.show_result(self.game.result)
-            self.timeout_thread = thread.Thread(target=self.timeout_function)
-            self.timeout_thread.start()
-            return True
 
         self.exe_pos_local = exe_pos
         logger.debug("%s: mainloop end", self.uid)
@@ -257,7 +262,7 @@ class Table:
                 hand = f" ({card_to_emoji(str(player.cards[0]))}  {card_to_emoji(str(player.cards[1]))}) "
 
             bgame.send_to_channel_by_table_id(
-                self.uid, f"{get_mentioned_string(player.userid)}{hand} {act} {abs(chip)}, current chip: {player.chip}\n")
+                self.uid, f"{player.username} {hand} {act} {abs(chip)}, current chip: {player.chip}\n")
 
     def check(self, user_id) -> str:
         player_pos = self.players_user2pos[user_id]
