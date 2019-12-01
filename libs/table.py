@@ -4,7 +4,7 @@ import uuid
 from typing import List, Dict
 import libs.game as lgame
 import bots.game as bgame
-from slackapi.payload import get_mentioned_string, build_payload, build_info_str, card_to_emoji
+from slackapi.payload import get_mentioned_string, build_payload, build_info_str, card_to_emoji, build_prompt_payload
 from .poker_bot import PokerBot
 from .player import Player
 import logging
@@ -211,6 +211,11 @@ class Table:
                 raise RuntimeError  # TODO: fix later
             if old_ts != "":
                 bgame.delete_msg_by_table_id(self.uid, old_ts)
+            exe_player = self.game.players[exe_pos]
+            bgame.send_private_msg_to_channel_by_table_id(
+                self.uid, exe_player.userid, None, build_prompt_payload(
+                    exe_player.cards, exe_player.get_remaining_chip(), self.game.highest_bet - exe_player.chip_bet
+                ))
 
         else:
             logger.debug("%s: mainloop decrease countdown %d", self.uid, self.countdown)
