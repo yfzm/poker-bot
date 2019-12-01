@@ -27,14 +27,14 @@ class ChannelInfo:
 
 def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str, text: str, mentioned: bool):
     def _get_username(s: str) -> str:
-        if len(s.split()) == 2:
-            return s.split()[1]
+        if len(s.split()) >= 2:
+            return " ".join(s.split()[1:])
         else:
             return get_username(web_client, user)
 
-    if text.startswith("open"):
+    if re.search(r"^open((\s)+(\w)*)*$", text) is not None:
         create_table(web_client, channel, user, _get_username(text))
-    elif text.startswith("join"):
+    elif re.search(r"^join((\s)+(\w)*)*$", text) is not None:
         join_table(web_client, channel, user, _get_username(text))
     elif text == "start":
         start_game(web_client, channel, user, is_new=True)

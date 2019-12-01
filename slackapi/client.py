@@ -79,7 +79,7 @@ def send_private_msg_in_channel(web_client: slack.WebClient, channel: str, user:
 def get_username(web_client: slack.WebClient, user: str) -> str:
     try:
         response = web_client.users_info(user=user)
-        return response['user']['name']
+        return response['user']['real_name']
     except slack.errors.SlackApiError:
         return "USER404"
 
