@@ -38,41 +38,44 @@ class Table:
         self.timeout_thread.start()
         self.poker_bots: Dict[str, PokerBot] = {}
         self.storage = storage
+        self.max_name_len = 0
 
-    def join(self, user_id, is_bot: bool = False):
+    def join(self, userid, username, is_bot: bool = False):
         """Join a table, return (pos, total_chip, table_chip, err)"""
-        if user_id in list(map(lambda player: player.user, self.players)):
+        if userid in list(map(lambda player: player.userid, self.players)):
             return -1, -1, -1, "already in this table"
 
-        chip, err = self.storage.fetch_user_chip(user_id)
+        chip, err = self.storage.fetch_user_chip(userid)
         if err is not None:
-            self.storage.create_user(user_id, INITIAL_CHIPS)
+            self.storage.create_user(userid, INITIAL_CHIPS)
             chip = INITIAL_CHIPS
 
         if is_bot:
-            self.storage.change_user_chip(user_id, INITIAL_CHIPS)
+            self.storage.change_user_chip(userid, INITIAL_CHIPS)
 
         pos = len(self.players)
-        player = Player(user_id, chip)
+        player = Player(userid, username, chip)
+        if len(username) > self.max_name_len:
+            self.max_name_len = len(username)
 
-        player.chip, err = self.storage.transfer_user_chip_to_table(player.user, INITIAL_TABLE_CHIPS, self.uid)
+        player.chip, err = self.storage.transfer_user_chip_to_table(player.userid, INITIAL_TABLE_CHIPS, self.uid)
         if err is not None:
             return -1, -1, -1, err
         if player.chip == 0:
             return -1, -1, -1, "no money, fuck"
 
         self.players.append(player)
-        self.players_user2pos[player.user] = pos
+        self.players_user2pos[player.userid] = pos
         self.timeout_counter = TIMEOUT
         return pos, chip, player.chip, None
 
-    def leave(self, user_id):
+    def leave(self, userid):
         """Leave a table, return (nplayer, err)"""
-        if user_id not in list(map(lambda player: player.user, self.players)):
+        if userid not in list(map(lambda player: player.userid, self.players)):
             return -1, "is not in this table"
-        player_pos = self.players_user2pos[user_id]
+        player_pos = self.players_user2pos[userid]
         player = self.players[player_pos]
-        self.storage.leave_table(player.user, self.uid, player.chip)
+        self.storage.leave_table(player.userid, self.uid, player.chip)
         self.players[player_pos].set_leaving()
         return len(self.players), None  # FIXME: maybe do not return nplayer
 
@@ -93,7 +96,7 @@ class Table:
         hands = []
         for pos, player in enumerate(active_players):
             hands.append({
-                "id": player.user,
+                "id": player.userid,
                 "hand": self.game.get_cards_by_pos(pos)
             })
         self.timer_thread.start()
@@ -111,11 +114,11 @@ class Table:
     def update_user2pos(self):
         self.players_user2pos.clear()
         for pos, player in enumerate(self.players):
-            self.players_user2pos[player.user] = pos
+            self.players_user2pos[player.userid] = pos
 
     def add_bot_player(self):
-        bot_id = f"bot_player_{len(self.poker_bots)}"
-        pos, _, table_chips, err = self.join(bot_id, True)
+        bot_id = f"bot_{len(self.poker_bots)}"
+        pos, _, table_chips, err = self.join(bot_id, bot_id, True)
         if err is not None:
             return err
         self.poker_bots[bot_id] = PokerBot(self.uid)
@@ -129,8 +132,8 @@ class Table:
         logger.debug("bot_function: pos: %d", game.exe_pos)
         logger.debug("bot_function: poker_bots: %s", str(self.poker_bots))
 
-        if exe_player.user in self.poker_bots:
-            self.poker_bots[exe_player.user].react(game, game.exe_pos)
+        if exe_player.userid in self.poker_bots:
+            self.poker_bots[exe_player.userid].react(game, game.exe_pos)
 
     def timeout_function(self):
         while self.timeout_counter > 0:
@@ -175,14 +178,14 @@ class Table:
             active_players = self.players[pos:] + self.players[:pos]
             for player in active_players:
                 if player.is_normal() and not player.is_fold():
-                    action = self.game.actions[player.user]
+                    action = self.game.actions[player.userid]
                     m_action = action.action if action.active else ""
                     m_chip = action.chip if action.active else 0
                     info_list.append(build_info_str(
-                        player.user, player.get_remaining_chip(), m_action, m_chip,
-                        self.players_user2pos[player.user] == exe_pos, self.countdown))
+                        player.username, self.max_name_len, player.get_remaining_chip(), m_action, m_chip,
+                        self.players_user2pos[player.userid] == exe_pos, self.countdown))
             return build_payload(self.game.pub_cards, self.game.total_pot, self.game.ante,
-                                 self.players[self.game.btn].user, info_list)
+                                 self.players[self.game.btn].userid, info_list)
 
         logger.debug("%s: mainloop", self.uid)
         if self.countdown == 0:
@@ -190,7 +193,7 @@ class Table:
             # TODO: prefer check over fold
             self.game.pfold(exe_pos)
             bgame.send_to_channel_by_table_id(
-                self.uid, f"timeout: {get_mentioned_string(self.players[exe_pos].user)} fold")
+                self.uid, f"timeout: {get_mentioned_string(self.players[exe_pos].userid)} fold")
             self.countdown = MAX_AWAIT
             return False
 
@@ -220,7 +223,7 @@ class Table:
         if not self.game.players[self.game.exe_pos].is_normal():
             self.game.pfold(self.game.exe_pos)
             bgame.send_to_channel_by_table_id(
-                self.uid, f"leaving: {get_mentioned_string(self.players[exe_pos].user)} fold")
+                self.uid, f"leaving: {get_mentioned_string(self.players[exe_pos].userid)} fold")
             self.countdown = MAX_AWAIT
             return False
 
@@ -249,7 +252,7 @@ class Table:
                 hand = f" ({card_to_emoji(str(player.cards[0]))}  {card_to_emoji(str(player.cards[1]))}) "
 
             bgame.send_to_channel_by_table_id(
-                self.uid, f"{get_mentioned_string(player.user)}{hand} {act} {abs(chip)}, current chip: {player.chip}\n")
+                self.uid, f"{get_mentioned_string(player.userid)}{hand} {act} {abs(chip)}, current chip: {player.chip}\n")
 
     def check(self, user_id) -> str:
         player_pos = self.players_user2pos[user_id]
@@ -278,15 +281,15 @@ class Table:
 
     def get_game_info(self) -> str:
         info_str = f"{self.game.game_status.name} {self.game.get_round_status_name()}\n"
-        info_str += f"btn: {self.game.btn} {get_mentioned_string(self.players[self.game.btn].user)}\n"
-        info_str += f"sb: {self.game.sb} {get_mentioned_string(self.players[self.game.sb].user)}\n"
-        info_str += f"bb: {self.game.bb} {get_mentioned_string(self.players[self.game.bb].user)}\n"
-        info_str += f"utg: {self.game.utg} {get_mentioned_string(self.players[self.game.utg].user)}\n"
-        info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].user)}\n"
-        info_str += f"next_round: {self.game.next_round} {get_mentioned_string(self.players[self.game.next_round].user)}\n"
+        info_str += f"btn: {self.game.btn} {get_mentioned_string(self.players[self.game.btn].userid)}\n"
+        info_str += f"sb: {self.game.sb} {get_mentioned_string(self.players[self.game.sb].userid)}\n"
+        info_str += f"bb: {self.game.bb} {get_mentioned_string(self.players[self.game.bb].userid)}\n"
+        info_str += f"utg: {self.game.utg} {get_mentioned_string(self.players[self.game.utg].userid)}\n"
+        info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].userid)}\n"
+        info_str += f"next_round: {self.game.next_round} {get_mentioned_string(self.players[self.game.next_round].userid)}\n"
         info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}\n"
         for pos, player in enumerate(self.game.players):
-            info_str += f"{get_mentioned_string(player.user)}: chip {player.chip}, \
+            info_str += f"{get_mentioned_string(player.userid)}: chip {player.chip}, \
                         total_bet {player.chip_bet}, cards {player.cards}, "
             info_str += f"can_check {self.game.is_check_permitted(pos)}, "
             info_str += f"mode {player.mode.name}, status {player.status.name}, "

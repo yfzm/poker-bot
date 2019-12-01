@@ -76,6 +76,27 @@ def send_private_msg_in_channel(web_client: slack.WebClient, channel: str, user:
             channel=channel, user=user, blocks=blocks)
 
 
+def get_username(web_client: slack.WebClient, user: str) -> str:
+    try:
+        response = web_client.users_info(user=user)
+        return response['user']['real_name']
+    except slack.errors.SlackApiError:
+        return "USER404"
+
+
+if __name__ == "__main__":
+    import os
+    import slack
+    slack_token = os.environ["SLACK_BOT_TOKEN"]
+    web_client = slack.WebClient(token=slack_token)
+    # print(get_username(web_client, "UPGH1C1PF"))
+    # web_client.files_upload(content="abc", channels=["CP3P9CS2W"])
+    web_client.chat_postMessage(channel="CP3P9CS2W", text="```abc```")
+
+    # ts = send_msg(web_client, "CP3P9CS2W", None, None,
+    #               build_payload(["Qs", "8d", "5c"], 1200, 20, "UPGH1C1PF", [p1, p2, p3]))
+
+
 # example payload:
 # [
 # 	{
