@@ -221,6 +221,15 @@ def send_to_channel_by_table_id(table_id, msg="void", blocks=None):
     return None, "table_id not found"
 
 
+def send_private_msg_to_channel_by_table_id(table_id, user, msg="void", blocks=None):
+    for (channel, info) in channels.items():
+        if info.table_id == table_id:
+            if not user.startswith("bot"):
+                send_private_msg_in_channel(info.client, channel, user, msg, blocks=blocks)
+            return None
+    return "table_id not found"
+
+
 def update_msg_by_table_id(table_id, ts, msg="void", blocks=None):
     for (channel, info) in channels.items():
         if info.table_id == table_id:
