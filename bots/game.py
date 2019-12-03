@@ -8,8 +8,8 @@ from typing import Dict
 
 HELP_MSG = """Try commands below:
 "help" to print this msg,
-"open name" to create a table,
-"join name" to sit at a table,
+"open <name>(optional)" to create a table,
+"join <name>(optional)" to sit at a table,
 "start" to start a game,
 "continue" to continue next game,
 "leave" to leave table,
@@ -17,7 +17,7 @@ HELP_MSG = """Try commands below:
 "chip" to check current chips you have.
 support poker operation as below
 "bet <number>"  for raise ,
-"call", "all", "check", "fold", 
+"call", "all", "check", "fold".
 """
 
 
