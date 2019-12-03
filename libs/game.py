@@ -3,11 +3,12 @@ from functools import wraps
 from .card import Card
 from .poker_cmp import poker7
 import random
-from typing import List, Dict
+from typing import List, Dict, Callable, Any
 from .player import Player
 import threading
 import logging
 import uuid
+import time
 
 
 class GameStatus(IntEnum):
@@ -75,8 +76,24 @@ class Action:
         self.active = False
 
 
+class RoundAction:
+    def __init__(self, round_status: RoundStatus, players: List[Player]):
+        self.round_status = round_status
+        self.actions: Dict[str, Action] = dict()
+        for player in players:
+            self.actions[player.userid] = Action("", 0, False)
+
+    def add_action(self, player: Player, action: str, chip: int):
+        self.actions[player.userid] = Action(action, chip)
+
+
+def default_notifier(round_status: RoundStatus, stall: bool):
+    pass
+
+
 class Game(object):
-    def __init__(self):
+    def __init__(self, notifier: Callable[[RoundStatus, bool], Any] = default_notifier):
+        self.notifier = notifier
         self.players: List[Player] = []
         self.game_status: GameStatus = GameStatus.WAITING
         self.round_status: RoundStatus = None
@@ -95,16 +112,17 @@ class Game(object):
         self.last_aggressive = 0
         self.result = Result()
         self.lock = threading.RLock()
-        self.actions: Dict[str, Action] = dict()
+        self.round_actions: List[RoundAction] = list()
         self.id = uuid.uuid4()
         self.logger = logging.getLogger(__name__)
 
     def init_game(self, players: List[Player], ante: int, btn: int):
         self.players = players
-        self.actions.clear()
         for player in self.players:
             player.init()
-            self.actions[player.userid] = Action("", 0, False)
+        self.round_actions.clear()
+        for round_status in RoundStatus:
+            self.round_actions.append(RoundAction(round_status, self.players))
         self.round_status = RoundStatus.PREFLOP
         self.nplayers = len(self.players)
         self.deck = Deck()
@@ -169,6 +187,7 @@ class Game(object):
     def invoke_next_player(self):
         self.logger.debug("%s: invoke next player", self.id)
         if self.get_active_player_num() == 1:
+            self.notifier(self.round_status, True)
             self.logger.debug("%s: invoke next player, player_num == 1, go to end", self.id)
             self.end()
             return
@@ -179,14 +198,17 @@ class Game(object):
             # all-in case
             self.pub_cards += [self.deck.get_card()
                                for i in range(len(self.pub_cards), 5)]
+            self.notifier(self.round_status, True)
             self.end()
             return
 
         self.logger.debug("%s: invoke next player, next round %d", self.id, self.next_round)
 
-        self.exe_pos = r
         if r == self.next_round:
             # enter next phase
+            self.notifier(self.round_status, True)
+            time.sleep(2)  # FIXME: This is not elegant, but I cannot find another way to do it!
+
             self.round_status = RoundStatus(self.round_status.value + 1)
             self.last_round_bet = self.highest_bet
             if self.round_status == RoundStatus.FLOP:
@@ -197,11 +219,13 @@ class Game(object):
                 self.river()
             elif self.round_status == RoundStatus.END:
                 self.end()
-            for player in self.players:
-                self.actions[player.userid].set_disabled()
             self.exe_pos = self.sb
             self.next_round = self.sb
             self.last_aggressive = self.sb
+        else:
+            self.exe_pos = r
+            self.notifier(self.round_status, False)
+
         # fold or allin at beginning
         if not self.players[self.next_round].is_playing():
             self.next_round = self.find_next_active_player(self.next_round)
@@ -299,8 +323,8 @@ class Game(object):
     def pcall(self, pos):
         if pos != self.exe_pos or self.put_chip(pos, self.highest_bet - self.players[pos].chip_bet, 'CALL') < 0:
             return -1
-        self.actions[self.players[pos].userid] = Action(
-            "call", self.players[pos].chip_bet - self.last_round_bet)
+        self.round_actions[self.round_status.value].add_action(
+            self.players[pos], "call", self.players[pos].chip_bet - self.last_round_bet)
         self.invoke_next_player()
         return 0
 
@@ -309,7 +333,7 @@ class Game(object):
         if pos != self.exe_pos:
             return -1
         self.players[pos].set_fold()
-        self.actions[self.players[pos].userid] = Action("fold", 0)
+        self.round_actions[self.round_status.value].add_action(self.players[pos], "fold", 0)
         self.invoke_next_player()
         return 0
 
@@ -317,7 +341,7 @@ class Game(object):
     def pcheck(self, pos):
         if pos != self.exe_pos or not self.is_check_permitted(pos):
             return -1
-        self.actions[self.players[pos].userid] = Action("check", 0)
+        self.round_actions[self.round_status.value].add_action(self.players[pos], "check", 0)
         self.invoke_next_player()
         return 0
 
@@ -329,8 +353,8 @@ class Game(object):
 
         self.next_round = self.exe_pos
         self.put_chip(pos, num, 'RAISE')
-        self.actions[self.players[pos].userid] = Action(
-            "raise", self.players[pos].chip_bet - self.last_round_bet)
+        self.round_actions[self.round_status.value].add_action(
+            self.players[pos], "raise", self.players[pos].chip_bet - self.last_round_bet)
         self.highest_bet = self.players[pos].chip_bet
         self.last_aggressive = pos
         self.invoke_next_player()
@@ -347,8 +371,8 @@ class Game(object):
             self.next_round = self.exe_pos
             self.last_aggressive = pos
         self.put_chip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
-        self.actions[self.players[pos].userid] = Action(
-            "all-in", self.players[pos].chip_bet - self.last_round_bet)
+        self.round_actions[self.round_status.value].add_action(
+            self.players[pos], "all-in", self.players[pos].chip_bet - self.last_round_bet)
         self.invoke_next_player()
         return 0
 
