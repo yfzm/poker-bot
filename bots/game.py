@@ -143,7 +143,7 @@ def start_game(web_client: slack.WebClient, channel: str, user: str, is_new=True
         else:
             send_msg(web_client, channel, f"{hand['id']} has {card_str}")
     send_msg(web_client, channel,
-             "Game started! I have send your hand to you personnaly.")
+             "Game started! I have send your hand to you personnaly. And type help or @me to get help message")
 
 
 def add_bot(web_client: slack.WebClient, channel: str):
