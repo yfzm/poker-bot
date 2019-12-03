@@ -161,50 +161,35 @@ def add_bot(web_client: slack.WebClient, channel: str):
 def bet(web_client: slack.WebClient, channel: str, user: str, chip):
     table_id = channels[channel].table_id
     err = gameManager.bet(table_id, user, int(chip))
-    if err is None:
-        pass
-        # send_msg(web_client, channel, f"has raised {chip}", user)
-    else:
+    if err is not None:
         send_msg(web_client, channel, err)
 
 
 def call(web_client: slack.WebClient, channel: str, user: str):
     table_id = channels[channel].table_id
     err = gameManager.call(table_id, user)
-    if err is None:
-        pass
-        # send_msg(web_client, channel, "has called", user)
-    else:
+    if err is not None:
         send_msg(web_client, channel, err)
 
 
 def all_in(web_client: slack.WebClient, channel: str, user: str):
     table_id = channels[channel].table_id
     err = gameManager.all_in(table_id, user)
-    if err is None:
-        pass
-        # send_msg(web_client, channel, "has raised all in", user)
-    else:
+    if err is not None:
         send_msg(web_client, channel, err)
 
 
 def check(web_client: slack.WebClient, channel: str, user: str):
     table_id = channels[channel].table_id
     err = gameManager.check(table_id, user)
-    if err is None:
-        pass
-        # send_msg(web_client, channel, "has checked", user)
-    else:
+    if err is not None:
         send_msg(web_client, channel, err)
 
 
 def fold(web_client: slack.WebClient, channel: str, user: str):
     table_id = channels[channel].table_id
     err = gameManager.fold(table_id, user)
-    if err is None:
-        # pass
-        send_msg(web_client, channel, "has folded", user)
-    else:
+    if err is not None:
         send_msg(web_client, channel, err)
 
 

@@ -234,13 +234,16 @@ class Table:
         exe_pos = self.game.exe_pos
         active_players = self.players[pos:] + self.players[:pos]
         for player in active_players:
-            if player.is_normal() and not player.is_fold():
+            if player.is_normal():
                 action = self.game.round_actions[round_status.value].actions[player.userid]
                 m_action = ""
                 m_chip = 0
                 if action.active and (stall or player != self.players[exe_pos]):
                     m_action = action.action
                     m_chip = action.chip
+
+                if player.is_fold() and m_action != "fold":
+                    continue
 
                 info_list.append(build_info_str(
                     player.username, self.max_name_len, player.get_remaining_chip(), m_action, m_chip,
