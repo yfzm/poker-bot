@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Table:
     def __init__(self, owner: str, storage: Storage):
         self.uid = str(uuid.uuid4())
-        self.game = lgame.Game()
+        self.game = lgame.Game(self.update_payload)
         self.owner = owner
         self.players: List[Player] = []
         self.players_user2pos: Dict[str, int] = dict()
@@ -30,7 +30,7 @@ class Table:
         self.round_status_local = ""
         self.msg_ts = ""
         self.btn = 0
-        self.ante = 20
+        self.ante = 2
         self.counter = 0  # number of games
         self.timer_thread = thread.Thread(target=self.timer_function)
         self.timeout_thread = thread.Thread(target=self.timeout_function)
@@ -39,6 +39,7 @@ class Table:
         self.poker_bots: Dict[str, PokerBot] = {}
         self.storage = storage
         self.max_name_len = 0
+        self.is_stall_payload = False
 
     def join(self, userid, username, is_bot: bool = False):
         """Join a table, return (pos, total_chip, table_chip, err)"""
@@ -177,6 +178,8 @@ class Table:
         round_status = self.game.get_round_status_name()
         exe_pos = self.game.exe_pos
 
+        logger.debug("%s: mainloop", self.uid)
+
         if round_status == "END":
             logger.debug("%s: mainloop exit", self.uid)
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
@@ -186,22 +189,6 @@ class Table:
             self.timeout_thread.start()
             return True
 
-        def get_payload():
-            info_list = []
-            pos = self.game.sb
-            active_players = self.players[pos:] + self.players[:pos]
-            for player in active_players:
-                if player.is_normal() and not player.is_fold():
-                    action = self.game.actions[player.userid]
-                    m_action = action.action if action.active else ""
-                    m_chip = action.chip if action.active else 0
-                    info_list.append(build_info_str(
-                        player.username, self.max_name_len, player.get_remaining_chip(), m_action, m_chip,
-                        self.players_user2pos[player.userid] == exe_pos, self.countdown))
-            return build_payload(self.game.pub_cards, self.game.total_pot, self.game.ante,
-                                 self.players[self.game.btn].username, info_list)
-
-        logger.debug("%s: mainloop", self.uid)
         if self.countdown == 0:
             logger.debug("%s: mainloop countdown", self.uid)
             # TODO: prefer check over fold
@@ -216,15 +203,6 @@ class Table:
             # the game has changed to the next status, while local status is behind
             # so, we should print some message
             self.round_status_local = round_status
-            self.countdown = MAX_AWAIT
-            # if exe_pos == self.exe_pos_local:
-            old_ts = self.msg_ts
-            self.msg_ts, err = bgame.send_to_channel_by_table_id(
-                self.uid, blocks=get_payload())
-            if err is not None:
-                raise RuntimeError  # TODO: fix later
-            if old_ts != "":
-                bgame.delete_msg_by_table_id(self.uid, old_ts)
             exe_player = self.game.players[exe_pos]
             bgame.send_private_msg_to_channel_by_table_id(
                 self.uid, exe_player.userid, None, build_prompt_payload(
@@ -237,7 +215,7 @@ class Table:
             # so, we should update the message and decrease the countdown
             self.countdown -= 1
             bgame.update_msg_by_table_id(
-                self.uid, self.msg_ts, blocks=get_payload())
+                self.uid, self.msg_ts, blocks=self._get_payload(self.game.round_status, self.is_stall_payload))
 
         if not self.game.players[self.game.exe_pos].is_normal():
             self.game.pfold(self.game.exe_pos)
@@ -249,6 +227,46 @@ class Table:
         self.exe_pos_local = exe_pos
         logger.debug("%s: mainloop end", self.uid)
         return False
+
+    def _get_payload(self, round_status: lgame.RoundStatus, stall: bool):
+        info_list = []
+        pos = self.game.sb
+        exe_pos = self.game.exe_pos
+        active_players = self.players[pos:] + self.players[:pos]
+        for player in active_players:
+            if player.is_normal():
+                action = self.game.round_actions[round_status.value].actions[player.userid]
+                m_action = ""
+                m_chip = 0
+                if action.active and (stall or player != self.players[exe_pos]):
+                    m_action = action.action
+                    m_chip = action.chip
+
+                if player.is_fold() and m_action != "fold":
+                    continue
+
+                info_list.append(build_info_str(
+                    player.username, self.max_name_len, player.get_remaining_chip(), m_action, m_chip,
+                    not stall and player == self.players[exe_pos], self.countdown))
+        return build_payload(self.game.pub_cards, self.game.total_pot, self.game.ante,
+                             self.players[self.game.btn].username, info_list)
+
+    def update_payload(self, round_status: lgame.RoundStatus, stall: bool):
+        """Update the message which we sent to the table to indicate the info of current round
+
+        Args:
+            round_status (RoundStatus): An enum which implies the round
+            stall (bool): A flag which indicates whether the countdown should continue
+        """
+        old_ts = self.msg_ts
+        self.countdown = MAX_AWAIT
+        self.msg_ts, err = bgame.send_to_channel_by_table_id(
+            self.uid, blocks=self._get_payload(round_status, stall))
+        if err is not None:
+            raise RuntimeError  # TODO: fix later
+        self.is_stall_payload = stall
+        if old_ts != "":
+            bgame.delete_msg_by_table_id(self.uid, old_ts)
 
     def show_result(self, result: lgame.Result):
         players = self.game.players[self.game.last_aggressive:] + self.game.players[:self.game.last_aggressive]
