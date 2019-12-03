@@ -7,15 +7,17 @@ from typing import Dict
 
 
 HELP_MSG = """Try commands below:
-open to create a table,
-join to sit at a table,
-start to start a game,
-r  for raise,
-c  for check,
-f  for fold.
-a  for all in
-ca for call
-b  for bet
+"help" to print this msg,
+"open <name>(optional)" to create a table,
+"join <name>(optional)" to sit at a table,
+"start" to start a game,
+"continue" to continue next game,
+"leave" to leave table,
+"bot" to ask a bot join,
+"chip" to check current chips you have.
+support poker operation as below
+"bet <number>"  for raise ,
+"call", "all", "check", "fold".
 """
 
 
@@ -62,7 +64,7 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
     elif text == "chip":
         show_chip(web_client, channel, user)
     else:
-        if mentioned:
+        if mentioned or text == "help":
             send_msg(web_client, channel, HELP_MSG, user)
 
 
@@ -143,7 +145,7 @@ def start_game(web_client: slack.WebClient, channel: str, user: str, is_new=True
         else:
             send_msg(web_client, channel, f"{hand['id']} has {card_str}")
     send_msg(web_client, channel,
-             "Game started! I have send your hand to you personnaly.")
+             "Game started! I have send your hand to you personnaly. And type help or @me to get help message")
 
 
 def add_bot(web_client: slack.WebClient, channel: str):
