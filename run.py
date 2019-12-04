@@ -20,9 +20,11 @@ class SyncClient(slack.WebClient):
         self._synclock = threading.Lock()
 
     def api_call(self, *args, **kwargs):
-        self._synclock.acquire()
-        res = super().api_call(*args, **kwargs)
-        self._synclock.release()
+        try:
+            self._synclock.acquire()
+            res = super().api_call(*args, **kwargs)
+        finally:
+            self._synclock.release()
         return res
 
 
