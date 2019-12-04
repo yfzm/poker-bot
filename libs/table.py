@@ -214,8 +214,9 @@ class Table:
             # neither the game stage nor current active player are changed
             # so, we should update the message and decrease the countdown
             self.countdown -= 1
-            bgame.update_msg_by_table_id(
-                self.uid, self.msg_ts, blocks=self._get_payload(self.game.round_status, self.is_stall_payload))
+            if self.msg_ts != "":
+                bgame.update_msg_by_table_id(
+                    self.uid, self.msg_ts, blocks=self._get_payload(self.game.round_status, self.is_stall_payload))
 
         if not self.game.players[self.game.exe_pos].is_normal():
             self.game.pfold(self.game.exe_pos)
