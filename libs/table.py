@@ -1,4 +1,5 @@
 import time
+import random
 import threading as thread
 import uuid
 from typing import List, Dict
@@ -13,7 +14,6 @@ from .storage import Storage
 MAX_AWAIT = 600
 INITIAL_CHIPS = 1000
 INITIAL_TABLE_CHIPS = 200
-TIMEOUT = 600
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +29,10 @@ class Table:
         self.exe_pos_local = -1
         self.round_status_local = ""
         self.msg_ts = ""
-        self.btn = 0
+        self.btn = -1
         self.ante = 2
         self.counter = 0  # number of games
-        self.timer_thread = thread.Thread(target=self.timer_function)
-        self.timeout_thread = thread.Thread(target=self.timeout_function)
-        self.timeout_counter = TIMEOUT
-        self.timeout_thread.start()
+        self.timer_thread = None
         self.poker_bots: Dict[str, PokerBot] = {}
         self.storage = storage
         self.max_name_len = 0
@@ -67,8 +64,14 @@ class Table:
 
         self.players.append(player)
         self.players_user2pos[player.userid] = pos
-        self.timeout_counter = TIMEOUT
         return pos, chip, player.chip, None
+
+    def force_close(self):
+        self.game.force_end()
+        if self.timer_thread is not None:
+            self.timer_thread.join()
+        for player in self.players:
+            self.leave(player.userid)
 
     def leave(self, userid):
         """Leave a table, return (nplayer, err)"""
@@ -82,16 +85,22 @@ class Table:
 
     def start(self, user_id):
         """Start a game, return (hands, err)"""
-        # if user_id != self.owner:
-        #     return None, "Failed to start, because only the one who open the table can start the game"
-        active_players = list(filter(lambda p: not p.is_leaving(), self.players))
-        if len(active_players) < 2:
+        if self.game.is_running():
+            return None, "already running"
+
+        self.players = list(filter(lambda p: not p.is_leaving(), self.players))
+        if len(self.players) < 2:
             return None, "Failed to start, because this game requires at least TWO players"
+
+        if self.btn == -1:
+            self.btn = random.randint(0, len(self.players) - 1)
+        else:
+            self.btn = (self.btn + 1) % len(self.players)
+
+        active_players = self.players.copy()
         for player in active_players:
             player.set_normal()
         self.update_user2pos()
-        self.timeout_counter = -1
-        self.timeout_thread.join()
         self.game.start(active_players, self.ante, self.btn)
         logger.debug("%s: game start successfully", self.uid)
         hands = []
@@ -100,17 +109,11 @@ class Table:
                 "id": player.userid,
                 "hand": self.game.get_cards_by_pos(pos)
             })
+        if self.timer_thread is not None:
+            self.timer_thread.join()  # FIXME: necessary?
+        self.timer_thread = thread.Thread(target=self.timer_function)
         self.timer_thread.start()
         return hands, None
-
-    def continue_game(self, user_id):
-        self.players = list(filter(lambda p: not p.is_leaving(), self.players))
-        # TODO: check if game is running
-        self.timer_thread.join()
-        self.timer_thread = thread.Thread(target=self.timer_function)
-        # TODO: maybe not always point to the next
-        self.btn = (self.btn + 1) % len(self.players)
-        return self.start(user_id)
 
     def update_user2pos(self):
         self.players_user2pos.clear()
@@ -141,25 +144,6 @@ class Table:
         if exe_player.userid in self.poker_bots:
             self.poker_bots[exe_player.userid].react(game, game.exe_pos)
 
-    def timeout_function(self):
-        while self.timeout_counter > 0:
-            time.sleep(1)
-            self.timeout_counter -= 1
-            if self.timeout_counter == 0:
-                logger.info("timeout")
-                self.countdown = MAX_AWAIT
-                self.exe_pos_local = -1
-                self.round_status_local = ""
-                self.msg_ts = ""
-                self.btn = 0
-                self.ante = 20
-                self.counter = 0  # number of games
-                self.timer_thread = thread.Thread(target=self.timer_function)
-                self.timeout_thread = thread.Thread(target=self.timeout_function)
-                self.timeout_counter = TIMEOUT
-                self.poker_bots: Dict[str, PokerBot] = {}
-                return
-
     def timer_function(self):
         time.sleep(3)
         while True:
@@ -185,8 +169,6 @@ class Table:
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
             self.game.result.execute()
             self.show_result(self.game.result)
-            self.timeout_thread = thread.Thread(target=self.timeout_function)
-            self.timeout_thread.start()
             return True
 
         if self.countdown == 0:
