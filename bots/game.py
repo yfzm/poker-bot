@@ -1,11 +1,13 @@
 import slack
 import re
+import logging
 from libs.manager import gameManager
 from slackapi.client import send_msg, send_private_msg_in_channel, update_msg, delete_msg, get_username
 from slackapi.payload import card_to_emoji
 from typing import Dict
 
 
+logger = logging.getLogger(__name__)
 HELP_MSG = """Try commands below:
 "help" to print this msg,
 "open <name>(optional)" to create a table,
@@ -220,16 +222,24 @@ def send_private_msg_to_channel_by_table_id(table_id, user, msg="void", blocks=N
 def update_msg_by_table_id(table_id, ts, msg="void", blocks=None):
     for (channel, info) in channels.items():
         if info.table_id == table_id:
-            update_msg(info.client, channel, msg, ts, blocks=blocks)
-            return None
+            try:
+                update_msg(info.client, channel, msg, ts, blocks=blocks)
+                return None
+            except slack.errors.SlackApiError:
+                logger.debug("update msg failed with ts %s, table_id %s", ts, table_id)
+                return "send failed"
     return "table_id not found"
 
 
 def delete_msg_by_table_id(table_id, ts):
     for (channel, info) in channels.items():
         if info.table_id == table_id:
-            delete_msg(info.client, channel, ts)
-            return None
+            try:
+                delete_msg(info.client, channel, ts)
+                return None
+            except slack.errors.SlackApiError:
+                logger.debug("delete msg failed with ts %s, table_id %s", ts, table_id)
+                return "delete failed"
     return "table_id not found"
 
 

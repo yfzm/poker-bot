@@ -166,8 +166,11 @@ class Game(object):
         self.utg = self.find_next_active_player(self.bb)
 
         # a flag for end of one round
-        self.exe_pos = self.utg
-        self.next_round = self.utg
+        self.exe_pos = self.bb
+        self.next_round = self.exe_pos
+        self.invoke_next_player()
+        self.next_round = self.exe_pos
+        self.last_aggressive = self.exe_pos
 
         self.put_chip(self.sb, self.ante // 2, 'SB')
         self.put_chip(self.bb, self.ante, 'BB')
@@ -207,7 +210,7 @@ class Game(object):
         if r == self.next_round:
             # enter next phase
             self.notifier(self.round_status, True)
-            time.sleep(2)  # FIXME: This is not elegant, but I cannot find another way to do it!
+            time.sleep(1)  # FIXME: This is not elegant, but I cannot find another way to do it!
 
             self.round_status = RoundStatus(self.round_status.value + 1)
             self.last_round_bet = self.highest_bet
@@ -219,9 +222,12 @@ class Game(object):
                 self.river()
             elif self.round_status == RoundStatus.END:
                 self.end()
-            self.exe_pos = self.sb
-            self.next_round = self.sb
-            self.last_aggressive = self.sb
+                return
+            self.exe_pos = self.btn
+            self.next_round = self.exe_pos
+            self.invoke_next_player()
+            self.last_aggressive = self.exe_pos
+            self.next_round = self.exe_pos
         else:
             self.exe_pos = r
             self.notifier(self.round_status, False)
