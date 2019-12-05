@@ -313,7 +313,6 @@ class Table:
         info_str += f"btn: {self.game.btn} {get_mentioned_string(self.players[self.game.btn].userid)}\n"
         info_str += f"sb: {self.game.sb} {get_mentioned_string(self.players[self.game.sb].userid)}\n"
         info_str += f"bb: {self.game.bb} {get_mentioned_string(self.players[self.game.bb].userid)}\n"
-        info_str += f"utg: {self.game.utg} {get_mentioned_string(self.players[self.game.utg].userid)}\n"
         info_str += f"exe_pos: {self.game.exe_pos} {get_mentioned_string(self.players[self.game.exe_pos].userid)}\n"
         info_str += f"next_round: {self.game.next_round} {get_mentioned_string(self.players[self.game.next_round].userid)}\n"
         info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}\n"

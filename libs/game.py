@@ -102,7 +102,6 @@ class Game:
         self.btn = 0
         self.sb = 0
         self.bb = 0
-        self.utg = 0
         self.ante = 0
         self.exe_pos = 0
         self.total_pot = 0
@@ -161,9 +160,11 @@ class Game:
             player.cards[1] = self.deck.get_card()
 
         # blind
-        self.sb = self.find_next_active_player(self.btn)
+        if self.nplayers == 2:
+            self.sb = self.btn
+        else:
+            self.sb = self.find_next_active_player(self.btn)
         self.bb = self.find_next_active_player(self.sb)
-        self.utg = self.find_next_active_player(self.bb)
 
         # a flag for end of one round
         self.exe_pos = self.bb
