@@ -41,7 +41,7 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
     elif re.search(r"^join((\s)+(\w)*)*$", text) is not None:
         join_table(web_client, channel, user, _get_username(text))
     elif text == "start":
-        start_game(web_client, channel, user, is_new=True)
+        start_game(web_client, channel, user)
     elif re.search(r"^bet(\s)+(\d)+$", text) is not None:
         chip = int(text.split()[1])
         bet(web_client, channel, user, chip)
@@ -54,7 +54,7 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
     elif text == "fold":
         fold(web_client, channel, user)
     elif text == "continue":
-        start_game(web_client, channel, user, is_new=False)
+        start_game(web_client, channel, user)
     elif text == "leave" or text == "quit":
         leave_table(web_client, channel, user)
     elif text == "info":
@@ -124,16 +124,14 @@ def leave_table(web_client: slack.WebClient, channel: str, user: str):
     send_msg(web_client, channel, f"just leaf the table, total player: {nplayer}", user)
 
 
-def start_game(web_client: slack.WebClient, channel: str, user: str, is_new=True):
+def start_game(web_client: slack.WebClient, channel: str, user: str):
     if channel not in channels.keys():
         send_msg(web_client, channel,
                  "Failed to start, because there is no opened game in this channel.")
         return
     table_id = channels[channel].table_id
-    if is_new:
-        hands, err = gameManager.start(table_id, user)
-    else:
-        hands, err = gameManager.continue_game(table_id, user)
+
+    hands, err = gameManager.start(table_id, user)
     if err is not None:
         send_msg(web_client, channel, err)
         return
@@ -147,7 +145,7 @@ def start_game(web_client: slack.WebClient, channel: str, user: str, is_new=True
         else:
             send_msg(web_client, channel, f"{hand['id']} has {card_str}")
     send_msg(web_client, channel,
-             "Game started! I have send your hand to you personnaly. And type help or @me to get help message")
+             "Game started! I have send your hand to you personally. And type help or @me to get help message")
 
 
 def add_bot(web_client: slack.WebClient, channel: str):

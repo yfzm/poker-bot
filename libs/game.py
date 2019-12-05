@@ -148,6 +148,9 @@ class Game:
     def get_exe_pos(self):
         return self.exe_pos
 
+    def is_running(self):
+        return self.game_status == GameStatus.RUNNING
+
     @status([GameStatus.WAITING])
     def start(self, players: List[Player], ante: int, btn: int):
         self.init_game(players, ante, btn)
