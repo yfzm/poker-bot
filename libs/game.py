@@ -91,7 +91,7 @@ def default_notifier(round_status: RoundStatus, stall: bool):
     pass
 
 
-class Game(object):
+class Game:
     def __init__(self, notifier: Callable[[RoundStatus, bool], Any] = default_notifier):
         self.notifier = notifier
         self.players: List[Player] = []
@@ -356,9 +356,9 @@ class Game(object):
         # TODO: check valid raise: the diff is bigger than the last diff
         if pos != self.exe_pos:
             return -1
-
+        if self.put_chip(pos, num, 'RAISE'):
+            return -1
         self.next_round = self.exe_pos
-        self.put_chip(pos, num, 'RAISE')
         self.round_actions[self.round_status.value].add_action(
             self.players[pos], "raise", self.players[pos].chip_bet - self.last_round_bet)
         self.highest_bet = self.players[pos].chip_bet

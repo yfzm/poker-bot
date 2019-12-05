@@ -276,7 +276,7 @@ class Table:
             chip = result.chip_changes[player]
             act = "win" if chip >= 0 else "lose"
             hand = ""
-            if result.should_show_hand() and player.rank >= biggest_rank:
+            if result.should_show_hand() and not player.is_fold() and player.rank >= biggest_rank:
                 biggest_rank = player.rank
                 hand = f" ({card_to_emoji(str(player.cards[0]))}  {card_to_emoji(str(player.cards[1]))}) "
 
