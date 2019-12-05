@@ -10,15 +10,16 @@ from typing import Dict
 logger = logging.getLogger(__name__)
 HELP_MSG = """Try commands below:
 `help` to print this msg,
-`open <name>(optional)` to create a table,
-`join <name>(optional)` to sit at a table,
-`start` to start a game,
+`open <name>(optional)` to create a table as <name>,
+`join <name>(optional)` to sit at a table as <name>,
+`reopen <name>(optional)` to reopen a table as <name>,
+`start` to start a game or continue next game,
 `continue` to continue next game,
-`leave` to leave table,
-`bot` to ask a bot join,
+`leave` or `quit` to leave table,
+`bot` to ask a bot to join in,
 `chip` to check current chips you have.
-support poker operation as below
-`bet <number>`  for raise,
+support the following poker operations:
+`bet <number>` for raise <number>,
 `call`, `all`, `check`, `fold`.
 """
 
@@ -40,6 +41,8 @@ def handle_message(web_client: slack.WebClient, channel: str, user: str, ts: str
         create_table(web_client, channel, user, _get_username(text))
     elif re.search(r"^join((\s)+(\w)*)*$", text) is not None:
         join_table(web_client, channel, user, _get_username(text))
+    elif re.search(r"^reopen((\s)+(\w)*)*$", text) is not None:
+        reopen_table(web_client, channel, user, _get_username(text))
     elif text == "start":
         start_game(web_client, channel, user)
     elif re.search(r"^bet(\s)+(\d)+$", text) is not None:
@@ -76,7 +79,8 @@ channels: Dict[str, ChannelInfo] = dict()
 def create_table(web_client: slack.WebClient, channel: str, user: str, username: str):
     if channel in channels.keys():
         send_msg(web_client, channel,
-                 "Failed to open a game, because there is an unfinished game in this channel!")
+                 "Failed to open a game, because there is an unfinished game in this channel! \
+                  If you want to reopen the table, type `reopen` instead")
         return
 
     table_id = gameManager.open(user)
@@ -84,6 +88,20 @@ def create_table(web_client: slack.WebClient, channel: str, user: str, username:
     send_msg(web_client, channel,
              "Successfully opened a game! Everyone is free to join the table.")
     join_table(web_client, channel, user, username)
+
+
+def reopen_table(web_client: slack.WebClient, channel: str, user: str, username: str):
+    if channel not in channels.keys():
+        send_msg(web_client, channel,
+                 "Warning: There is no opened table in this channel. Create table instead.")
+        create_table(web_client, channel, user, username)
+        return
+
+    gameManager.close(channels[channel].table_id)
+    channels.pop(channel)
+    send_msg(web_client, channel,
+             "Successfully closed table. Reopening...")
+    create_table(web_client, channel, user, username)
 
 
 def join_table(web_client: slack.WebClient, channel: str, user: str, username: str):

@@ -66,6 +66,13 @@ class Table:
         self.players_user2pos[player.userid] = pos
         return pos, chip, player.chip, None
 
+    def force_close(self):
+        self.game.force_end()
+        if self.timer_thread is not None:
+            self.timer_thread.join()
+        for player in self.players:
+            self.leave(player.userid)
+
     def leave(self, userid):
         """Leave a table, return (nplayer, err)"""
         if userid not in list(map(lambda player: player.userid, self.players)):

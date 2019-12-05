@@ -31,6 +31,10 @@ class GameManager:
         self.tables[table.uid] = table
         return table.uid
 
+    def close(self, table_id):
+        self.tables[table_id].force_close()
+        self.tables.pop(table_id)
+
     def join(self, table_id, user_id, username):
         """Join a table, return (pos, total_chip, table_chip, err)"""
         table = self.tables[table_id]

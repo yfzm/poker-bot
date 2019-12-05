@@ -151,6 +151,11 @@ class Game:
     def is_running(self):
         return self.game_status == GameStatus.RUNNING
 
+    def force_end(self):
+        self.notifier = default_notifier
+        self.game_status = GameStatus.WAITING
+        self.round_status = RoundStatus.END
+
     @status([GameStatus.WAITING])
     def start(self, players: List[Player], ante: int, btn: int):
         self.init_game(players, ante, btn)
