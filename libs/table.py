@@ -158,6 +158,11 @@ class Table:
             if elapsed_time < 1.0:
                 time.sleep(1.0 - elapsed_time)
 
+    def update_chip(self, userid: str, chips: int):
+        err = self.storage.change_table_chip(userid, self.uid, chips)
+        if err is not None:
+            raise RuntimeError(err)  # FIXME: how to handle?
+
     def mainloop(self):
         round_status = self.game.get_round_status_name()
         exe_pos = self.game.exe_pos
@@ -167,7 +172,7 @@ class Table:
         if round_status == "END":
             logger.debug("%s: mainloop exit", self.uid)
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
-            self.game.result.execute()
+            self.game.result.execute(self.update_chip)
             self.show_result(self.game.result)
             return True
 
@@ -299,8 +304,8 @@ class Table:
         info_str += f"next_round: {self.game.next_round} {get_mentioned_string(self.players[self.game.next_round].userid)}\n"
         info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}\n"
         for pos, player in enumerate(self.game.players):
-            info_str += f"{get_mentioned_string(player.userid)}: chip {player.chip}, \
-                        total_bet {player.chip_bet}, cards {player.cards}, "
+            info_str += f"{get_mentioned_string(player.userid)}: chip {player.chip}, "
+            info_str += f"total_bet {player.chip_bet}, cards {player.cards}, "
             info_str += f"can_check {self.game.is_check_permitted(pos)}, "
             info_str += f"mode {player.mode.name}, status {player.status.name}, "
             info_str += f"rank {player.rank}, hand {player.hand}\n"

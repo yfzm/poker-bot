@@ -157,7 +157,20 @@ class Storage(object):
             cursor.close()
 
     def change_table_chip(self, userid: str, tableid: str, chips: int):
-        pass
+        cursor = self.conn.cursor()
+        cursor.execute("""BEGIN""")
+        try:
+            cursor.execute(
+                """UPDATE usertable
+                SET chips = ?
+                WHERE tableid=? and userid = ?;""",
+                (chips, tableid, userid)
+            )
+        except Exception:
+            return "change table chip failed"
+        finally:
+            cursor.execute("""COMMIT;""")
+            cursor.close()
 
 
 if __name__ == '__main__':

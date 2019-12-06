@@ -44,6 +44,10 @@ def status(ss):
     return dec
 
 
+def default_set_storage(userid: str, chips: int):
+    pass
+
+
 class Result:
     def __init__(self):
         self.type: ResultType = ResultType.ALL_FOLD
@@ -58,11 +62,12 @@ class Result:
     def lose_bet(self, player: Player, chip: int):
         self.chip_changes[player] -= chip
 
-    def execute(self):
+    def execute(self, set_storage: Callable[[str, int], Any] = default_set_storage):
         for player, chip in self.chip_changes.items():
             player.chip += chip
             if player.chip <= 0:
                 logging.debug("%s has no chips(%d) and is about to leaving", player.username, player.chip)
+                set_storage(player.userid, player.chip)
                 player.set_leaving()
 
     def should_show_hand(self) -> bool:

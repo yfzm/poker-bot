@@ -79,8 +79,8 @@ channels: Dict[str, ChannelInfo] = dict()
 def create_table(web_client: slack.WebClient, channel: str, user: str, username: str):
     if channel in channels.keys():
         send_msg(web_client, channel,
-                 "Failed to open a game, because there is an unfinished game in this channel! \
-                  If you want to reopen the table, type `reopen` instead")
+                 "Failed to open a game, because there is an unfinished game in this channel! "
+                 "If you want to reopen the table, type `reopen` instead")
         return
 
     table_id = gameManager.open(user)
