@@ -61,6 +61,9 @@ class Result:
     def execute(self):
         for player, chip in self.chip_changes.items():
             player.chip += chip
+            if player.chip <= 0:
+                logging.debug("%s has no chips(%d) and is about to leaving", player.username, player.chip)
+                player.set_leaving()
 
     def should_show_hand(self) -> bool:
         return self.type != ResultType.ALL_FOLD
