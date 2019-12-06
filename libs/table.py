@@ -158,11 +158,6 @@ class Table:
             if elapsed_time < 1.0:
                 time.sleep(1.0 - elapsed_time)
 
-    def update_chip(self, userid: str, chips: int):
-        err = self.storage.change_table_chip(userid, self.uid, chips)
-        if err is not None:
-            raise RuntimeError(err)  # FIXME: how to handle?
-
     def mainloop(self):
         round_status = self.game.get_round_status_name()
         exe_pos = self.game.exe_pos
@@ -172,8 +167,12 @@ class Table:
         if round_status == "END":
             logger.debug("%s: mainloop exit", self.uid)
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
-            self.game.result.execute(self.update_chip)
+            self.game.result.execute()
+            self.update_chip()
             self.show_result(self.game.result)
+            self.players = list(filter(lambda p: not p.is_leaving(), self.players))
+            self.is_stall_payload = True
+            self.msg_ts = ""
             return True
 
         if self.countdown == 0:
@@ -255,6 +254,15 @@ class Table:
         self.is_stall_payload = stall
         if old_ts != "":
             bgame.delete_msg_by_table_id(self.uid, old_ts)
+
+    def update_chip(self):
+        for player in self.game.players:
+            self.storage.change_table_chip(player.userid, self.uid, player.chip)
+            if player.chip <= 0:
+                logging.debug("%s has no chips(%d) and is about to leaving", player.username, player.chip)
+                player.set_leaving()
+                bgame.send_to_channel_by_table_id(
+                    self.uid, f"{player.username} doesn't have any chip, and is leaving the table")
 
     def show_result(self, result: lgame.Result):
         players = self.game.players[self.game.last_aggressive:] + self.game.players[:self.game.last_aggressive]
