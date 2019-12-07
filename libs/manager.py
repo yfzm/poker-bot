@@ -1,13 +1,9 @@
 from __future__ import annotations
 from enum import Enum
-from libs.game import Game
-import threading as thread
 from typing import Dict
-import time
-import bots.game as bgame
-from typing import Dict
-from slackapi.client import get_mentioned_string
 from .table import Table
+from .storage import Storage
+import logging
 
 MAX_PLAYER = 9
 
@@ -21,31 +17,38 @@ class Status(Enum):
 
 class GameManager:
     def __init__(self):
+        print("gamemanager")
+        self.logger = logging.getLogger(__name__)
         self.tables: Dict[str, Table] = dict()
+        self.storage = Storage('PokerGame.dat')
 
     def init_status(self):
         pass
 
     # TODO: need to protect through lock
-    def open(self, user_id):
-        table = Table(user_id)
+    def open(self, user_id: str):
+        table = Table(user_id, self.storage)
         self.tables[table.uid] = table
-        self.join(table.uid, user_id)  # Error handling?
         return table.uid
 
-    def join(self, table_id, user_id):
-        """Join a table, return (pos, nplayer, err)"""
+    def close(self, table_id):
+        self.tables[table_id].force_close()
+        self.tables.pop(table_id)
+
+    def join(self, table_id, user_id, username):
+        """Join a table, return (pos, total_chip, table_chip, err)"""
         table = self.tables[table_id]
-        return table.join(user_id)
+        return table.join(user_id, username)
+
+    def leave(self, table_id, user_id):
+        """Leave a table, return (nplayer, err)"""
+        table = self.tables[table_id]
+        return table.leave(user_id)
 
     def start(self, table_id, user_id):
         """Start a game, return (hands, err)"""
         table = self.tables[table_id]
         return table.start(user_id)
-
-    def continue_game(self, table_id, user_id):
-        table = self.tables[table_id]
-        return table.continue_game(user_id)
 
     def add_bot(self, table_id):
         table = self.tables[table_id]
@@ -75,6 +78,20 @@ class GameManager:
     def get_game_info(self, table_id) -> str:
         table = self.tables[table_id]
         return table.get_game_info()
+
+    def login(self, user_id) -> str:
+        self.storage.create_user(user_id, 500)
+        return None
+
+    def gain_chip(self, user_id) -> str:
+        err = self.storage.change_user_chip(user_id, 500)
+        return err
+
+    def show_chip(self, user_id) -> (int, str):
+        chips, err = self.storage.fetch_user_chip(user_id)
+        if err is not None:
+            return 0, err
+        return chips, None
 
 
 gameManager = GameManager()

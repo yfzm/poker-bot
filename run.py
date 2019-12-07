@@ -2,9 +2,30 @@ import slack
 import os
 import ssl as ssl_lib
 import certifi
-import time
-from slackapi.client import *
 from bots.game import handle_message
+import logging
+import threading
+import asyncio
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+logger = logging.getLogger(__name__)
+
+
+class SyncClient(slack.WebClient):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._synclock = threading.Lock()
+
+    def api_call(self, *args, **kwargs):
+        try:
+            self._synclock.acquire()
+            res = super().api_call(*args, **kwargs)
+        finally:
+            self._synclock.release()
+        return res
 
 
 @slack.RTMClient.run_on(event="message")
@@ -14,10 +35,8 @@ def test_rtm_client(**payload):
 
     # filter bot message
     if "subtype" in data.keys():
-        print(f"emit a {data['subtype']} message")
+        logger.info(f"emit a {data['subtype']} message")
         return
-    
-    web_client = payload["web_client"]
 
     text = data['text']
     channel = data['channel']
@@ -28,53 +47,15 @@ def test_rtm_client(**payload):
     if f'<@{bot_userid}>' in text:
         mentioned = True
 
-    handle_message(web_client=web_client, channel=channel, user=user, ts=ts, text=text, mentioned=mentioned)
+    handle_message(web_client=web_client, channel=channel,
+                   user=user, ts=ts, text=text, mentioned=mentioned)
 
 
 if __name__ == "__main__":
     slack_token = os.environ["SLACK_BOT_TOKEN"]
     ssl_context = ssl_lib.create_default_context(cafile=certifi.where())
-    web_client = slack.WebClient(token=slack_token)
+    web_client = SyncClient(token=slack_token, loop=asyncio.new_event_loop())
     bot_userid = web_client.auth_test()['user_id']
 
     rtm_client = slack.RTMClient(token=slack_token, ssl=ssl_context)
     rtm_client.start()
-
-
-# payload
-# user:
-# {
-#     'channel': 'CP3P9CS2W', 
-#     'client_msg_id': 'ef7da782-9247-40b4-...8da60ce45', 
-#     'event_ts': '1573485980.042900', 
-#     'source_team': 'TPGH1C1D3', 
-#     'suppress_notification': False, 
-#     'team': 'TPGH1C1D3', 
-#     'text': '<@UPJPKD5N2> Hello', 
-#     'ts': '1573485980.042900', 
-#     'user': 'UPGH1C1PF', 
-#     'user_team': 'TPGH1C1D3'
-# }
-# bot:
-# {
-#     'bot_id': 'BP53KL083', 
-#     'bot_profile': {
-#         'app_id': 'AP3PPRER0', 
-#         'deleted': False, 
-#         'icons': {...}, 
-#         'id': 'BP53KL083', 
-#         'name': 'Poker-bot', 
-#         'team_id': 'TPGH1C1D3', 
-#         'updated': 1572001401
-#     }, 
-#     'channel': 'CP3P9CS2W', 
-#     'event_ts': '1573535170.047000', 
-#     'source_team': 'TPGH1C1D3', 
-#     'subtype': 'bot_message', 
-#     'suppress_notification': False, 
-#     'team': 'TPGH1C1D3', 
-#     'text': '<@UPGH1C1PF> Try co...for bet\n', 
-#     'ts': '1573535170.047000', 
-#     'user_team': 'TPGH1C1D3', 
-#     'username': 'Poker-bot'
-# }
