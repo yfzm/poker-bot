@@ -168,7 +168,11 @@ class Table:
             logger.debug("%s: mainloop exit", self.uid)
             bgame.send_to_channel_by_table_id(self.uid, "Game Over!")
             self.game.result.execute()
+            self.update_chip()
             self.show_result(self.game.result)
+            self.players = list(filter(lambda p: not p.is_leaving(), self.players))
+            self.is_stall_payload = True
+            self.msg_ts = ""
             return True
 
         if self.countdown == 0:
@@ -251,6 +255,15 @@ class Table:
         if old_ts != "":
             bgame.delete_msg_by_table_id(self.uid, old_ts)
 
+    def update_chip(self):
+        for player in self.game.players:
+            self.storage.change_table_chip(player.userid, self.uid, player.chip)
+            if player.chip <= 0:
+                logging.debug("%s has no chips(%d) and is about to leaving", player.username, player.chip)
+                player.set_leaving()
+                bgame.send_to_channel_by_table_id(
+                    self.uid, f"{player.username} doesn't have any chip, and is leaving the table")
+
     def show_result(self, result: lgame.Result):
         players = self.game.players[self.game.last_aggressive:] + self.game.players[:self.game.last_aggressive]
         biggest_rank = players[0].rank
@@ -299,8 +312,8 @@ class Table:
         info_str += f"next_round: {self.game.next_round} {get_mentioned_string(self.players[self.game.next_round].userid)}\n"
         info_str += f"pub_card: {self.game.pub_cards}, highest_bet {self.game.highest_bet}\n"
         for pos, player in enumerate(self.game.players):
-            info_str += f"{get_mentioned_string(player.userid)}: chip {player.chip}, \
-                        total_bet {player.chip_bet}, cards {player.cards}, "
+            info_str += f"{get_mentioned_string(player.userid)}: chip {player.chip}, "
+            info_str += f"total_bet {player.chip_bet}, cards {player.cards}, "
             info_str += f"can_check {self.game.is_check_permitted(pos)}, "
             info_str += f"mode {player.mode.name}, status {player.status.name}, "
             info_str += f"rank {player.rank}, hand {player.hand}\n"

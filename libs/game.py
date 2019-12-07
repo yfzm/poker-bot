@@ -44,6 +44,10 @@ def status(ss):
     return dec
 
 
+def default_set_storage(userid: str, chips: int):
+    pass
+
+
 class Result:
     def __init__(self):
         self.type: ResultType = ResultType.ALL_FOLD
