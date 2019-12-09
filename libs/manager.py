@@ -36,7 +36,7 @@ class GameManager:
         self.tables.pop(table_id)
 
     def join(self, table_id, user_id, username):
-        """Join a table, return (pos, total_chip, table_chip, err)"""
+        """Join a table, return (pos, nplayers, total_chip, table_chip, err)"""
         table = self.tables[table_id]
         return table.join(user_id, username)
 

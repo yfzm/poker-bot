@@ -113,15 +113,15 @@ def join_table(web_client: slack.WebClient, channel: str, user: str, username: s
         return
     table_id = channels[channel].table_id
 
-    pos, total_chip, table_chip, err = gameManager.join(table_id, user, username)
+    pos, nplayers, total_chip, table_chip, err = gameManager.join(table_id, user, username)
     if err is not None:
         send_msg(web_client, channel, err)
         return
 
     send_msg(web_client, channel,
-             f"just joined at position {pos}, total player: {pos + 1}", user)
+             f"{username} just joined at position {pos}, total player: {nplayers}")
 
-    if pos + 1 == 2:
+    if nplayers == 2:
         send_msg(web_client, channel,
                  'Now you can start a game by replying "start" or wait for more player to join in.')
 

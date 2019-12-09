@@ -59,6 +59,9 @@ class Player:
     def is_normal(self) -> bool:
         return self.mode == PlayerMode.NORMAL
 
+    def set_entering(self) -> None:
+        self.mode = PlayerMode.ENTERING
+
     def set_normal(self) -> None:
         self.mode = PlayerMode.NORMAL
 
