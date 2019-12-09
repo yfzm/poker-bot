@@ -1,4 +1,5 @@
 import slack
+from slack.errors import SlackApiError
 
 
 def send_msg(web_client: slack.WebClient, channel: str, msg: str, user=None, blocks=None) -> str:
@@ -80,7 +81,7 @@ def get_username(web_client: slack.WebClient, user: str) -> str:
     try:
         response = web_client.users_info(user=user)
         return response['user']['real_name']
-    except slack.errors.SlackApiError:
+    except SlackApiError:
         return "USER404"
 
 
@@ -95,50 +96,3 @@ if __name__ == "__main__":
 
     # ts = send_msg(web_client, "CP3P9CS2W", None, None,
     #               build_payload(["Qs", "8d", "5c"], 1200, 20, "UPGH1C1PF", [p1, p2, p3]))
-
-
-# example payload:
-# [
-# 	{
-# 		"type": "section",
-# 		"text": {
-# 			"type": "mrkdwn",
-# 			"text": ":spades:*5*  :hearts:*7*  :clubs:*A*  :diamonds:*K* :clock12:  :b: :star: :large_blue_circle: :red_circle:"
-# 		}
-# 	},
-# 	{
-# 		"type": "divider"
-# 	},
-# 	{
-# 		"type": "section",
-# 		"text": {
-# 			"type": "mrkdwn",
-# 			"text": "*total pot: 1200\t\tlevel: 50/100\t\tbtn: <@Uabcdefg>*"
-# 		}
-# 	},
-# 	{
-# 		"type": "divider"
-# 	},
-# 	{
-# 		"type": "section",
-# 		"text": {
-# 			"type": "mrkdwn",
-# 			"text": "<@U122233>($200)  check\n<@Ufds2333>($500)  bet $200\n<@Uiofd234>($330)  :clock12: 49s\n<@Uedi1261>($220)"
-# 		}
-# 	}
-# ]
-
-# slack_response data
-# {
-#     'channel': 'CP3P9CS2W',
-#     'message': {
-#         'bot_id': 'BP53KL083',
-#         'subtype': 'bot_message',
-#         'text': '<@UPGH1C1PF> test api',
-#         'ts': '1573487677.043700',
-#         'type': 'message',
-#         'username': 'Poker-bot'
-#     },
-#     'ok': True,
-#     'ts': '1573487677.043700'
-# }

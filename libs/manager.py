@@ -36,7 +36,7 @@ class GameManager:
         self.tables.pop(table_id)
 
     def join(self, table_id, user_id, username):
-        """Join a table, return (pos, total_chip, table_chip, err)"""
+        """Join a table, return (pos, nplayers, total_chip, table_chip, err)"""
         table = self.tables[table_id]
         return table.join(user_id, username)
 
@@ -80,8 +80,7 @@ class GameManager:
         return table.get_game_info()
 
     def login(self, user_id) -> str:
-        self.storage.create_user(user_id, 500)
-        return None
+        return self.storage.create_user(user_id, 500)
 
     def gain_chip(self, user_id) -> str:
         err = self.storage.change_user_chip(user_id, 500)

@@ -1,4 +1,5 @@
 import slack
+from slack.errors import SlackApiError
 import re
 import logging
 from libs.manager import gameManager
@@ -112,15 +113,15 @@ def join_table(web_client: slack.WebClient, channel: str, user: str, username: s
         return
     table_id = channels[channel].table_id
 
-    pos, total_chip, table_chip, err = gameManager.join(table_id, user, username)
+    pos, nplayers, total_chip, table_chip, err = gameManager.join(table_id, user, username)
     if err is not None:
         send_msg(web_client, channel, err)
         return
 
     send_msg(web_client, channel,
-             f"just joined at position {pos}, total player: {pos + 1}", user)
+             f"{username} just joined at position {pos}, total player: {nplayers}")
 
-    if pos + 1 == 2:
+    if nplayers == 2:
         send_msg(web_client, channel,
                  'Now you can start a game by replying "start" or wait for more player to join in.')
 
@@ -241,7 +242,7 @@ def update_msg_by_table_id(table_id, ts, msg="void", blocks=None):
             try:
                 update_msg(info.client, channel, msg, ts, blocks=blocks)
                 return None
-            except slack.errors.SlackApiError:
+            except SlackApiError:
                 logger.debug("update msg failed with ts %s, table_id %s", ts, table_id)
                 return "send failed"
     return "table_id not found"
@@ -253,7 +254,7 @@ def delete_msg_by_table_id(table_id, ts):
             try:
                 delete_msg(info.client, channel, ts)
                 return None
-            except slack.errors.SlackApiError:
+            except SlackApiError:
                 logger.debug("delete msg failed with ts %s, table_id %s", ts, table_id)
                 return "delete failed"
     return "table_id not found"

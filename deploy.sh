@@ -1,11 +1,11 @@
 set -e
 
-cd ${POKER_BOT_PATH}
+cd "${POKER_BOT_PATH}"
 
-pid=$(ps -ef | grep run.py | grep -v grep | awk '{print $2}')
+pid=$(pgrep -f run.py)
 
 if [ -n "$pid" ]; then 
-	kill -9 $pid; 
+	kill -9 "$pid";
 fi
 
 git checkout dev || true

@@ -39,10 +39,7 @@ class Table:
         self.is_stall_payload = False
 
     def join(self, userid, username, is_bot: bool = False):
-        """Join a table, return (pos, total_chip, table_chip, err)"""
-        if userid in list(map(lambda player: player.userid, self.players)):
-            return -1, -1, -1, "already in this table"
-
+        """Join a table, return (pos, nplayers, total_chip, table_chip, err)"""
         chip, err = self.storage.fetch_user_chip(userid)
         if err is not None:
             self.storage.create_user(userid, INITIAL_CHIPS)
@@ -51,20 +48,29 @@ class Table:
         if is_bot:
             self.storage.change_user_chip(userid, INITIAL_CHIPS)
 
-        pos = len(self.players)
         player = Player(userid, username, chip)
+        pos = len(self.players)
+
+        if userid in list(map(lambda p: p.userid, self.players)):
+            pos = self.players_user2pos[userid]
+            player = self.players[pos]
+            if not player.is_leaving():
+                return -1, -1, -1, -1, "already in this table"
+            player.set_entering()
+
         if len(username) > self.max_name_len:
             self.max_name_len = len(username)
 
         player.chip, err = self.storage.transfer_user_chip_to_table(player.userid, INITIAL_TABLE_CHIPS, self.uid)
         if err is not None:
-            return -1, -1, -1, err
+            return -1, -1, -1, -1, err
         if player.chip == 0:
-            return -1, -1, -1, "no money, fuck"
+            return -1, -1, -1, -1, "no money, fuck"
 
-        self.players.append(player)
-        self.players_user2pos[player.userid] = pos
-        return pos, chip, player.chip, None
+        if player not in self.players:
+            self.players.append(player)
+            self.players_user2pos[player.userid] = pos
+        return pos, self.get_ready_player_num(), chip, player.chip, None
 
     def force_close(self):
         self.game.force_end()
@@ -73,15 +79,18 @@ class Table:
         for player in self.players:
             self.leave(player.userid)
 
+    def get_ready_player_num(self):
+        return len(list(filter(lambda p: not p.is_leaving(), self.players)))
+
     def leave(self, userid):
-        """Leave a table, return (nplayer, err)"""
+        """Leave a table, return (nplayers, err)"""
         if userid not in list(map(lambda player: player.userid, self.players)):
             return -1, "is not in this table"
         player_pos = self.players_user2pos[userid]
         player = self.players[player_pos]
         self.storage.leave_table(player.userid, self.uid, player.chip)
         self.players[player_pos].set_leaving()
-        return len(self.players), None  # FIXME: maybe do not return nplayer
+        return self.get_ready_player_num(), None
 
     def start(self, user_id):
         """Start a game, return (hands, err)"""
@@ -122,7 +131,7 @@ class Table:
 
     def add_bot_player(self):
         bot_id = f"bot_{len(self.poker_bots)}"
-        pos, _, table_chips, err = self.join(bot_id, bot_id, True)
+        pos, _, _, table_chips, err = self.join(bot_id, bot_id, True)
         if err is not None:
             return err
         self.poker_bots[bot_id] = PokerBot(self.uid)
@@ -148,13 +157,13 @@ class Table:
         time.sleep(3)
         while True:
             logger.debug("%s: timer trigger", self.uid)
-            starttime = time.time()
+            start_time = time.time()
             should_stop = self.mainloop()
             if should_stop:
                 logger.debug("%s: timer stop", self.uid)
                 break
             self.bot_function()
-            elapsed_time = time.time() - starttime
+            elapsed_time = time.time() - start_time
             if elapsed_time < 1.0:
                 time.sleep(1.0 - elapsed_time)
 
@@ -219,8 +228,8 @@ class Table:
         info_list = []
         pos = self.game.sb
         exe_pos = self.game.exe_pos
-        active_players = self.players[pos:] + self.players[:pos]
-        for player in active_players:
+        ordered_players = self.players[pos:] + self.players[:pos]
+        for player in ordered_players:
             if player.is_normal():
                 action = self.game.round_actions[round_status.value].actions[player.userid]
                 m_action = ""
@@ -262,7 +271,7 @@ class Table:
                 logging.debug("%s has no chips(%d) and is about to leaving", player.username, player.chip)
                 player.set_leaving()
                 bgame.send_to_channel_by_table_id(
-                    self.uid, f"{player.username} doesn't have any chip, and is leaving the table")
+                    self.uid, f"{player.username} does not have any chip, and is leaving the table")
 
     def show_result(self, result: lgame.Result):
         players = self.game.players[self.game.last_aggressive:] + self.game.players[:self.game.last_aggressive]

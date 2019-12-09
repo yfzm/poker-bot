@@ -44,10 +44,6 @@ def status(ss):
     return dec
 
 
-def default_set_storage(userid: str, chips: int):
-    pass
-
-
 class Result:
     def __init__(self):
         self.type: ResultType = ResultType.ALL_FOLD
@@ -108,6 +104,7 @@ class Game:
         self.bb = 0
         self.ante = 0
         self.exe_pos = 0
+        self.next_round = 0
         self.total_pot = 0
         self.pub_cards = []
         self.highest_bet = 0
@@ -185,20 +182,19 @@ class Game:
         self.next_round = self.exe_pos
         self.last_aggressive = self.exe_pos
 
-        self.put_chip(self.sb, self.ante // 2, 'SB')
-        self.put_chip(self.bb, self.ante, 'BB')
+        self.put_chip(self.sb, self.ante // 2)
+        self.put_chip(self.bb, self.ante)
         self.highest_bet = self.ante
 
         return 0
 
     def find_next_active_player(self, pos):
         new_pos = (pos + 1) % self.nplayers
-        while not(self.players[new_pos].is_normal() and self.players[new_pos].is_playing()):
-            if new_pos == pos:
-                return -1
+        while new_pos != pos:
+            if self.players[new_pos].is_normal() and self.players[new_pos].is_playing():
+                return new_pos
             new_pos = (new_pos + 1) % self.nplayers
-
-        return new_pos if new_pos != pos else -1
+        return -1
 
     def invoke_next_player(self):
         self.logger.debug("%s: invoke next player", self.id)
@@ -213,7 +209,7 @@ class Game:
         if r == -1:
             # all-in case
             self.pub_cards += [self.deck.get_card()
-                               for i in range(len(self.pub_cards), 5)]
+                               for _ in range(len(self.pub_cards), 5)]
             self.notifier(self.round_status, True)
             self.end()
             return
@@ -250,7 +246,7 @@ class Game:
             self.next_round = self.find_next_active_player(self.next_round)
 
     def flop(self):
-        self.pub_cards = [self.deck.get_card() for i in range(3)]
+        self.pub_cards = [self.deck.get_card() for _ in range(3)]
 
     def turn(self):
         self.pub_cards.append(self.deck.get_card())
@@ -264,7 +260,7 @@ class Game:
         Args:
             winners (List[Player]): the winners, if more than one player, they split the pot.
                 Note that the winners are sorted in **descending** order of their bet, which
-                is crucial beacause we always want to deal with the main pot first
+                is crucial because we always want to deal with the main pot first
             exclude_players (List[Player]): players in this list will not lose chips
                 to `winner`, because they have a bigger hand
         """
@@ -324,7 +320,7 @@ class Game:
                 count += 1
         return count
 
-    def put_chip(self, pos, num, action):
+    def put_chip(self, pos, num):
         player = self.players[pos]
         remaining_chip = player.get_remaining_chip()
         if remaining_chip < num:
@@ -340,7 +336,7 @@ class Game:
 
     @status([GameStatus.RUNNING])
     def pcall(self, pos):
-        if pos != self.exe_pos or self.put_chip(pos, self.highest_bet - self.players[pos].chip_bet, 'CALL') < 0:
+        if pos != self.exe_pos or self.put_chip(pos, self.highest_bet - self.players[pos].chip_bet) < 0:
             return -1
         self.round_actions[self.round_status.value].add_action(
             self.players[pos], "call", self.players[pos].chip_bet - self.last_round_bet)
@@ -369,7 +365,7 @@ class Game:
         # TODO: check valid raise: the diff is bigger than the last diff
         if pos != self.exe_pos:
             return -1
-        if self.put_chip(pos, num, 'RAISE'):
+        if self.put_chip(pos, num):
             return -1
         self.next_round = self.exe_pos
         self.round_actions[self.round_status.value].add_action(
@@ -389,27 +385,25 @@ class Game:
             self.highest_bet = self.players[pos].chip
             self.next_round = self.exe_pos
             self.last_aggressive = pos
-        self.put_chip(pos, self.players[pos].get_remaining_chip(), 'ALLIN')
+        self.put_chip(pos, self.players[pos].get_remaining_chip())
         self.round_actions[self.round_status.value].add_action(
             self.players[pos], "all-in", self.players[pos].chip_bet - self.last_round_bet)
         self.invoke_next_player()
         return 0
 
-    def getJSON(self):
-        return 'temp'
-
 
 class Deck(object):
     def __init__(self):
         self.deck_cards = list(range(0, 52))
+        self.cur = 0
         self.shuffle()
 
     def get_card(self):
-        num = self.deck_cards[self.i]
-        card = Card(int(num / 13), num % 13 + 1)
-        self.i = self.i + 1
+        num = self.deck_cards[self.cur]
+        card = Card(num // 13, num % 13 + 1)
+        self.cur += 1
         return card
 
     def shuffle(self):
         random.shuffle(self.deck_cards)
-        self.i = 0
+        self.cur = 0

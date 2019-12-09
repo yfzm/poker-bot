@@ -12,7 +12,7 @@ TEST_CASE = [
 
 
 class TestPokerCmp(unittest.TestCase):
-    def assertUnorderListEqual(self, l1, l2, msg=None):
+    def assertUnorderedListEqual(self, l1, l2, msg=None):
         return self.assertSetEqual(set(l1), set(l2), msg)
 
     def test_poker7(self):
