@@ -80,8 +80,7 @@ class GameManager:
         return table.get_game_info()
 
     def login(self, user_id) -> str:
-        self.storage.create_user(user_id, 500)
-        return None
+        return self.storage.create_user(user_id, 500)
 
     def gain_chip(self, user_id) -> str:
         err = self.storage.change_user_chip(user_id, 500)

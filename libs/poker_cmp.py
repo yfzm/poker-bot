@@ -27,9 +27,9 @@ def _kind(n, ranks):
 
 def _two_pair(ranks):
     pair = _kind(2, ranks)
-    lowpair = _kind(2, list(reversed(ranks)))
-    if pair and lowpair != pair:
-        return list(map(int, (pair, lowpair)))
+    low_pair = _kind(2, list(reversed(ranks)))
+    if pair and low_pair != pair:
+        return list(map(int, (pair, low_pair)))
     else:
         return None
 
@@ -37,23 +37,23 @@ def _two_pair(ranks):
 def _hand_rank(hand):
     ranks = _card_ranks(hand)
     if _straight(ranks) and _flush(hand):
-        return (8, max(ranks))
+        return 8, max(ranks)
     elif _kind(4, ranks):
-        return (7, _kind(4, ranks), _kind(1, ranks))
+        return 7, _kind(4, ranks), _kind(1, ranks)
     elif _kind(3, ranks) and _kind(2, ranks):
-        return (6, _kind(3, ranks), _kind(2, ranks))
+        return 6, _kind(3, ranks), _kind(2, ranks)
     elif _flush(hand):
-        return (5, ranks)
+        return 5, ranks
     elif _straight(ranks):
-        return (4, max(ranks))
+        return 4, max(ranks)
     elif _kind(3, ranks):
-        return (3, _kind(3, ranks), ranks)
+        return 3, _kind(3, ranks), ranks
     elif _two_pair(ranks):
-        return (2, _two_pair(ranks), ranks)
+        return 2, _two_pair(ranks), ranks
     elif _kind(2, ranks):
-        return (1, _kind(2, ranks), ranks)
+        return 1, _kind(2, ranks), ranks
     else:
-        return (0, ranks)
+        return 0, ranks
 
 
 def poker7(cards):

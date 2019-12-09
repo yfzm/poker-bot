@@ -57,18 +57,17 @@ class Storage(object):
             cursor.execute("""COMMIT;""")
             cursor.close()
 
-    def create_user(self, userid: str, chips: int):
+    def create_user(self, userid: str, chips: int) -> str:
+        cursor = self.conn.cursor()
         try:
-            cursor = self.conn.cursor()
             cursor.execute("""BEGIN""")
             cursor.execute(
                 """INSERT INTO user (userid, chips) VALUES (?, ?);""",
                 (userid, chips))
-        except Exception as e:
-            if type(e) == sqlite3.IntegrityError:
-                pass
-            else:
-                raise e
+        except sqlite3.IntegrityError:
+            pass
+        except Exception:
+            return "cannot create user"
         finally:
             cursor.execute("""COMMIT""")
             cursor.close()

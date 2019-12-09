@@ -1,4 +1,3 @@
-
 class Card(object):
     _COLOR = 'shcd'
     _NUM2CHAR = 'EA23456789TJQK'

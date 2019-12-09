@@ -40,7 +40,7 @@ class Table:
 
     def join(self, userid, username, is_bot: bool = False):
         """Join a table, return (pos, total_chip, table_chip, err)"""
-        if userid in list(map(lambda player: player.userid, self.players)):
+        if userid in list(map(lambda p: p.userid, self.players)):
             return -1, -1, -1, "already in this table"
 
         chip, err = self.storage.fetch_user_chip(userid)
@@ -74,14 +74,14 @@ class Table:
             self.leave(player.userid)
 
     def leave(self, userid):
-        """Leave a table, return (nplayer, err)"""
+        """Leave a table, return (nplayers, err)"""
         if userid not in list(map(lambda player: player.userid, self.players)):
             return -1, "is not in this table"
         player_pos = self.players_user2pos[userid]
         player = self.players[player_pos]
         self.storage.leave_table(player.userid, self.uid, player.chip)
         self.players[player_pos].set_leaving()
-        return len(self.players), None  # FIXME: maybe do not return nplayer
+        return len(self.players), None  # FIXME: maybe do not return nplayers
 
     def start(self, user_id):
         """Start a game, return (hands, err)"""
@@ -148,13 +148,13 @@ class Table:
         time.sleep(3)
         while True:
             logger.debug("%s: timer trigger", self.uid)
-            starttime = time.time()
+            start_time = time.time()
             should_stop = self.mainloop()
             if should_stop:
                 logger.debug("%s: timer stop", self.uid)
                 break
             self.bot_function()
-            elapsed_time = time.time() - starttime
+            elapsed_time = time.time() - start_time
             if elapsed_time < 1.0:
                 time.sleep(1.0 - elapsed_time)
 
@@ -262,7 +262,7 @@ class Table:
                 logging.debug("%s has no chips(%d) and is about to leaving", player.username, player.chip)
                 player.set_leaving()
                 bgame.send_to_channel_by_table_id(
-                    self.uid, f"{player.username} doesn't have any chip, and is leaving the table")
+                    self.uid, f"{player.username} does not have any chip, and is leaving the table")
 
     def show_result(self, result: lgame.Result):
         players = self.game.players[self.game.last_aggressive:] + self.game.players[:self.game.last_aggressive]

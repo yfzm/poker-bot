@@ -1,4 +1,5 @@
 import slack
+from slack.errors import SlackApiError
 import re
 import logging
 from libs.manager import gameManager
@@ -241,7 +242,7 @@ def update_msg_by_table_id(table_id, ts, msg="void", blocks=None):
             try:
                 update_msg(info.client, channel, msg, ts, blocks=blocks)
                 return None
-            except slack.errors.SlackApiError:
+            except SlackApiError:
                 logger.debug("update msg failed with ts %s, table_id %s", ts, table_id)
                 return "send failed"
     return "table_id not found"
@@ -253,7 +254,7 @@ def delete_msg_by_table_id(table_id, ts):
             try:
                 delete_msg(info.client, channel, ts)
                 return None
-            except slack.errors.SlackApiError:
+            except SlackApiError:
                 logger.debug("delete msg failed with ts %s, table_id %s", ts, table_id)
                 return "delete failed"
     return "table_id not found"

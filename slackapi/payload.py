@@ -39,7 +39,8 @@ def build_info_str(username: str, name_len: int, remaining_chip: int, action: st
     """Build a string to explain action of a user
 
     Args:
-        user (str): user id
+        username (str): user name
+        name_len (int): characters to show the name
         remaining_chip (int): remaining chip of the user
         action (str): the action being taken, should be one of the
             following: check, bet, raise, all-in, fold
@@ -48,10 +49,10 @@ def build_info_str(username: str, name_len: int, remaining_chip: int, action: st
             put-chip action against prior `bet`
         chip (int): the chip of an action, only meaningful when
             `action` is `bet`, `raise` or `all-in`
-        is_wating (bool): a flag that indicate if this user is in
-            execution postion
+        is_waiting (bool): a flag that indicate if this user is in
+            execution position
         countdown (int): the countdown of waiting, only meaningful
-            when `is_wating` is `True`
+            when `is_waiting` is `True`
 
     Return:
         info_str (str): a string to explain action of a user
@@ -68,11 +69,9 @@ def build_info_str(username: str, name_len: int, remaining_chip: int, action: st
 
 
 def build_payload(pub_cards: List[str], pot: int, ante: int, btn_username: str, infos: List[str]) -> List[object]:
-    ret = []
-
-    ret.append({
+    ret = [{
         "type": "divider"
-    })
+    }]
 
     if len(pub_cards) > 0:
         card_str = ""
