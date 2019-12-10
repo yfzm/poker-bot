@@ -54,11 +54,6 @@ class GameManager:
         table = self.tables[table_id]
         return table.add_bot_player()
 
-    def check(self, table_id, user_id) -> str:
-        """Check, return err"""
-        table = self.tables[table_id]
-        return table.check(user_id)
-
     def fold(self, table_id, user_id) -> str:
         table = self.tables[table_id]
         return table.fold(user_id)
@@ -67,9 +62,9 @@ class GameManager:
         table = self.tables[table_id]
         return table.bet(user_id, chip)
 
-    def call(self, table_id, user_id) -> str:
+    def call_or_check(self, table_id, user_id) -> str:
         table = self.tables[table_id]
-        return table.call(user_id)
+        return table.call_or_check(user_id)
 
     def all_in(self, table_id, user_id) -> str:
         table = self.tables[table_id]
