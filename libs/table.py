@@ -11,7 +11,7 @@ from .player import Player
 import logging
 from .storage import Storage
 
-MAX_AWAIT = 600
+MAX_AWAIT = 60
 INITIAL_CHIPS = 1000
 INITIAL_TABLE_CHIPS = 200
 
@@ -186,10 +186,18 @@ class Table:
 
         if self.countdown == 0:
             logger.debug("%s: mainloop countdown", self.uid)
-            # TODO: prefer check over fold
-            self.game.pfold(exe_pos)
-            bgame.send_to_channel_by_table_id(
-                self.uid, f"timeout: {self.players[exe_pos].username} fold")
+            player = self.players[exe_pos]
+            player.timeout_count += 1
+            if player.timeout_count >= 2:
+                self.game.pfold(exe_pos)
+                bgame.send_to_channel_by_table_id(
+                    self.uid, f"timeout {player.timeout_count} times: {player.username} is leaving the table")
+                player.set_leaving()
+            else:
+                if self.game.is_check_permitted(exe_pos):
+                    self.game.pcheck(exe_pos)
+                else:
+                    self.game.pfold(exe_pos)
             self.countdown = MAX_AWAIT
             return False
 
