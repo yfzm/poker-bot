@@ -309,19 +309,6 @@ class Game:
             self.win_pot(winner_players, exclude_players)
             exclude_players.extend(winner_players)
 
-        # winner_players = []
-        # exclude_players = []
-        # last_rank = active_players[0].rank
-        # for p in active_players:
-        #     if p.rank == last_rank:
-        #         winner_players.append(p)
-        #     else:
-        #         self.win_pot(winner_players, exclude_players)
-        #         exclude_players += winner_players.copy()
-        #         winner_players = [p]
-        #         last_rank = p.rank
-        # self.win_pot(winner_players, exclude_players)
-
         self.round_status = RoundStatus.END
         self.game_status = GameStatus.WAITING
 
