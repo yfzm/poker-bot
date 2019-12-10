@@ -25,6 +25,7 @@ class Player:
         self.chip_bet = 0
         self.cards = [0] * 2
         self.status = PlayerStatus.PLAYING
+        self.timeout_count = 0
         self.rank = None
         self.hand = None
 
