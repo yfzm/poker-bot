@@ -295,6 +295,12 @@ class Table:
             bgame.send_to_channel_by_table_id(
                 self.uid, f"{player.username} {hand} {act} {abs(chip)}, current chip: {player.chip}\n")
 
+    def call_or_check(self, user_id) -> str:
+        player_pos = self.players_user2pos[user_id]
+        if self.game.is_check_permitted(player_pos):
+            return self.check(user_id)
+        return self.call(user_id)
+
     def check(self, user_id) -> str:
         player_pos = self.players_user2pos[user_id]
         if self.game.pcheck(player_pos) != 0:
