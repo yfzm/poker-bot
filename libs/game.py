@@ -109,6 +109,7 @@ class Game:
         self.total_pot = 0
         self.pub_cards = []
         self.highest_bet = 0
+        self.mini_raise = 0
         self.last_round_bet = 0
         self.last_aggressive = 0
         self.result = Result()
@@ -132,6 +133,7 @@ class Game:
         self.exe_pos = -1
         self.pub_cards = []
         self.highest_bet = 0
+        self.mini_raise = 0
         self.last_round_bet = 0
         self.last_aggressive = 0
         self.result = Result()
@@ -186,6 +188,7 @@ class Game:
         self.put_chip(self.sb, self.ante // 2)
         self.put_chip(self.bb, self.ante)
         self.highest_bet = self.ante
+        self.mini_raise = self.ante * 2
 
         return 0
 
@@ -238,6 +241,7 @@ class Game:
             self.invoke_next_player()
             self.last_aggressive = self.exe_pos
             self.next_round = self.exe_pos
+            self.mini_raise = self.ante
         else:
             self.exe_pos = r
             self.notifier(self.round_status, False)
@@ -370,15 +374,18 @@ class Game:
 
     @status([GameStatus.RUNNING])
     def praise(self, pos, num):
-        # TODO: check valid raise: the diff is bigger than the last diff
         if pos != self.exe_pos:
+            return -1
+        cur_round_bet = self.players[pos].chip_bet - self.last_round_bet + num
+        if cur_round_bet < self.mini_raise:
             return -1
         if self.put_chip(pos, num):
             return -1
         self.next_round = self.exe_pos
-        self.round_actions[self.round_status.value].add_action(
-            self.players[pos], "raise", self.players[pos].chip_bet - self.last_round_bet)
+        self.round_actions[self.round_status.value].add_action(self.players[pos], "raise", cur_round_bet)
+        diff_raise = self.players[pos].chip_bet - self.highest_bet
         self.highest_bet = self.players[pos].chip_bet
+        self.mini_raise += diff_raise
         self.last_aggressive = pos
         self.invoke_next_player()
         return 0
@@ -390,7 +397,9 @@ class Game:
 
         # does allin raise the chip?
         if self.players[pos].chip > self.highest_bet:
+            diff_raise = self.players[pos].chip - self.highest_bet
             self.highest_bet = self.players[pos].chip
+            self.mini_raise += diff_raise
             self.next_round = self.exe_pos
             self.last_aggressive = pos
         self.put_chip(pos, self.players[pos].get_remaining_chip())
