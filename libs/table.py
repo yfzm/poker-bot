@@ -207,9 +207,11 @@ class Table:
             # so, we should print some message
             self.round_status_local = round_status
             exe_player = self.game.players[exe_pos]
+            # FIXME: The calculation is tedious and error prone
             bgame.send_private_msg_to_channel_by_table_id(
                 self.uid, exe_player.userid, None, build_prompt_payload(
-                    exe_player.cards, exe_player.get_remaining_chip(), self.game.highest_bet - exe_player.chip_bet
+                    exe_player.cards, exe_player.get_remaining_chip(), self.game.highest_bet - exe_player.chip_bet,
+                    self.game.mini_raise + self.game.last_round_bet - exe_player.chip_bet
                 ))
 
         else:
