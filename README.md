@@ -1,5 +1,9 @@
 # Poker Bot
 
+[![Actions Status](https://github.com/yfzm/poker-bot/workflows/build/badge.svg)](https://github.com/yfzm/poker-bot/actions)
+[![Release](https://img.shields.io/github/v/release/yfzm/poker-bot?include_prereleases)](https://github.com/yfzm/poker-bot/releases)
+[![License](https://img.shields.io/github/license/yfzm/poker-bot)](https://github.com/yfzm/poker-bot/license)
+
 一款基于Slack的德州扑克机器人。
 
 ## 安装
