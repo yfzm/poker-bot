@@ -1,14 +1,16 @@
 from enum import IntEnum
 from functools import wraps
-from .poker_cmp import poker7
 import random
-from typing import List, Dict, Callable, Any
-from .player import Player
 import threading
 import logging
 import uuid
 import time
 from itertools import groupby
+from typing import List, Dict, Callable, Any
+
+from .poker_cmp import poker7
+from .player import Player
+from .card import Card
 
 
 class GameStatus(IntEnum):
@@ -403,4 +405,5 @@ class Deck(object):
         self.deck_cards = random.sample(range(52), 52)
 
     def get_card(self):
-        return self.deck_cards.pop()
+        num = self.deck_cards.pop()
+        return Card(num // 13, num % 13 + 1)
