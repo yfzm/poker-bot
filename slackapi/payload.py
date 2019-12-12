@@ -107,21 +107,39 @@ def build_payload(pub_cards: List[str], pot: int, ante: int, btn_username: str, 
     return ret
 
 
-def build_prompt_payload(cards: List[str], remaining: int, call_needed: int):
+def build_prompt_payload(cards: List[str], remaining: int, call_needed: int, mini_raise: int):
+    """Build prompt payload to tell player their choices. The choices include `check`, `call`,
+    `bet`, `all in` and `fold`. Only when `call_needed` = `0`, we give `check` hint. Only when
+    `0` < `call_needed` < `remaining`, we give `call` hint. Only when `remaining` > `call_needed`
+    or `remaining` > `mini_raise`, we give `bet` option. We always give `all in` and `fold`
+    options
+
+    Args:
+        cards (List[str]): Player's hand
+        remaining (int): The chip that the user own at the time
+        call_needed (int): The chip that the user need to call (0 for check)
+        mini_raise (int): The minimal chip to raise
+    """
     ret = []
 
     card_str = ""
     for card in cards:
         card_str += card_to_emoji(str(card)) + " "
 
-    action = "*check*" if call_needed == 0 else f"*call* ${call_needed}"
-    prompt = f"you can {action}, *bet* (*all* for all-in) or *fold*"
+    actions = ""
+    if call_needed == 0:
+        actions += "`c`heck, "
+    if 0 < call_needed <= remaining:
+        actions += f"`c`all ${call_needed}, "
+    if remaining > call_needed or remaining > mini_raise:
+        actions += f"`b`et [chip num](at least ${mini_raise}), "
+    actions += "`a`ll in, or `f`old"
 
     ret.append({
         "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"Your hand: {card_str}   Your chips: ${remaining}\n{prompt}"
+                    "text": f"It's your turn. Your hand is {card_str}\nYou can choose {actions}"
                 }
     })
 
