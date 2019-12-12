@@ -121,8 +121,7 @@ class Game:
         self.players = players
         for player in self.players:
             player.init()
-        self.round_actions = [RoundAction(i, self.players)
-                              for i in RoundStatus]
+        self.round_actions = [RoundAction(i, self.players) for i in RoundStatus]
         self.round_status = RoundStatus.PREFLOP
         self.nplayers = len(self.players)
         self.deck = Deck()
@@ -202,8 +201,7 @@ class Game:
         self.logger.debug("%s: invoke next player", self.id)
         if self.get_active_player_num() == 1:
             self.notifier(self.round_status, True)
-            self.logger.debug(
-                "%s: invoke next player, player_num == 1, go to end", self.id)
+            self.logger.debug("%s: invoke next player, player_num == 1, go to end", self.id)
             self.end()
             return
 
@@ -217,8 +215,7 @@ class Game:
             self.end()
             return
 
-        self.logger.debug(
-            "%s: invoke next player, next round %d", self.id, self.next_round)
+        self.logger.debug("%s: invoke next player, next round %d", self.id, self.next_round)
 
         if r == self.next_round:
             # enter next phase
@@ -302,8 +299,7 @@ class Game:
             active_players.sort(key=lambda p: p.chip_bet, reverse=False)
             active_players.sort(key=lambda p: p.rank, reverse=True)
 
-        grouped_active_players = [list(g) for _, g in groupby(
-            active_players, lambda x: x.rank)]
+        grouped_active_players = [list(g) for _, g in groupby(active_players, lambda x: x.rank)]
 
         exclude_players = []
         for winner_players in grouped_active_players:
@@ -348,8 +344,7 @@ class Game:
         if pos != self.exe_pos:
             return -1
         self.players[pos].set_fold()
-        self.round_actions[self.round_status.value].add_action(
-            self.players[pos], "fold", 0)
+        self.round_actions[self.round_status.value].add_action(self.players[pos], "fold", 0)
         self.invoke_next_player()
         return 0
 
@@ -357,8 +352,7 @@ class Game:
     def pcheck(self, pos):
         if pos != self.exe_pos or not self.is_check_permitted(pos):
             return -1
-        self.round_actions[self.round_status.value].add_action(
-            self.players[pos], "check", 0)
+        self.round_actions[self.round_status.value].add_action(self.players[pos], "check", 0)
         self.invoke_next_player()
         return 0
 
@@ -372,8 +366,7 @@ class Game:
         if self.put_chip(pos, num):
             return -1
         self.next_round = self.exe_pos
-        self.round_actions[self.round_status.value].add_action(
-            self.players[pos], "raise", cur_round_bet)
+        self.round_actions[self.round_status.value].add_action(self.players[pos], "raise", cur_round_bet)
         diff_raise = self.players[pos].chip_bet - self.highest_bet
         self.highest_bet = self.players[pos].chip_bet
         self.mini_raise += diff_raise
